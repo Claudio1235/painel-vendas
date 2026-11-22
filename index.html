@@ -158,6 +158,7 @@
         // ============================================================
         // CONFIGURAÇÃO DAS ABAS
         // ============================================================
+        const SPREADSHEET_ID = '1y9zx6olaOdrQA2TSgebdtvS22VGXZlkSElcI4yMIwXw';
         const GAS_PROXY_URL = 'https://script.google.com/macros/s/AKfycbxay1JjpcmVdGQV0P6QHRiOKLA9V2pexleTwLWPxyDfQFwOlFWDw59aLpVg5grIFIaq/exec';
 
         const CONFIG_ABAS = [
@@ -233,7 +234,7 @@
             });
         }
 
-        // ---------------- Parsing CSV/TSV ----------------
+        // ---------------- Parsing CSV ----------------
         function parseCSV(texto) {
             const linhas = []; let campo = ''; let linha = []; let dentroAspas = false;
             for (let i = 0; i < texto.length; i++) {
@@ -254,31 +255,6 @@
             return linhas;
         }
 
-        function construirItem(obj, padrao) {
-            const item = obj['item'] || '';
-            if (!item) return null;
-
-            const tipoCol = obj['tipo'];
-            const tipoDoCampo = (tipoCol && !/n[ãa]o\s*identificad/i.test(tipoCol) && tipoCol !== '—') ? tipoCol : null;
-            const tipoFinal = padrao.tipo || tipoDoCampo || extrairTipo(item);
-            const dataStr = obj['data_da_venda'] || obj['data'] || '';
-            
-            return {
-                item,
-                tipo: tipoFinal,
-                cor: obj['cor'] || 'Não informado',
-                tamanho: obj['tamanho'] || 'Não informado',
-                fornecedor: padrao.fornecedor || obj['fornecedor'] || 'Não informado',
-                vendedora: obj['vendedora'] || 'Não informada',
-                mes: extrairMes(dataStr),
-                receita: converterMoeda(obj['valor_vendido_por_item']) * numInt(obj['pecas_vendidas']),
-                custo_total: converterMoeda(obj['valor_comprado_por_item']) * numInt(obj['quantidade_comprada']),
-                lucro: converterMoeda(obj['lucro_das_vendas'] || obj['lucro']),
-                qtd_vendida: numInt(obj['pecas_vendidas']),
-                estoque: numInt(obj['quantidade_comprada']) - numInt(obj['pecas_vendidas'])
-            };
-        }
-
         function parsearLinhasCSV(texto, padrao = {}) {
             const linhas = parseCSV(texto);
             if (linhas.length < 2) throw new Error('CSV com menos de 2 linhas.');
@@ -296,31 +272,53 @@
                 
                 if (itemUpper === 'TOTAL' || itemUpper.startsWith('TOTAL')) {
                     const est = numInt(obj['pecas_nao_vendidas']);
+                    console.log(`[Painel] Linha TOTAL encontrada na aba. Estoque lido: ${est}`);
                     totalEstoqueOficial += est;
                     continue; 
                 }
 
                 if (!obj['item']) continue;
                 
-                const itemObj = construirItem(obj, padrao);
-                if (itemObj) resultado.push(itemObj);
+                const tipoCol = obj['tipo'];
+                const tipoDoCampo = (tipoCol && !/n[ãa]o\s*identificad/i.test(tipoCol) && tipoCol !== '—') ? tipoCol : null;
+                const tipoFinal = padrao.tipo || tipoDoCampo || extrairTipo(obj['item']);
+                const dataStr = obj['data_da_venda'] || obj['data'] || '';
+                
+                resultado.push({
+                    item: obj['item'],
+                    tipo: tipoFinal,
+                    cor: obj['cor'] || 'Não informado',
+                    tamanho: obj['tamanho'] || 'Não informado',
+                    fornecedor: padrao.fornecedor || obj['fornecedor'] || 'Não informado',
+                    vendedora: obj['vendedora'] || 'Não informada',
+                    mes: extrairMes(dataStr),
+                    receita: converterMoeda(obj['valor_vendido_por_item']) * numInt(obj['pecas_vendidas']),
+                    custo_total: converterMoeda(obj['valor_comprado_por_item']) * numInt(obj['quantidade_comprada']),
+                    lucro: converterMoeda(obj['lucro_das_vendas'] || obj['lucro']),
+                    qtd_vendida: numInt(obj['pecas_vendidas']),
+                    estoque: numInt(obj['pecas_nao_vendidas'])
+                });
             }
             return resultado;
         }
 
         // ============================================================
-        // BUSCA CSV ATRAVÉS DO SEU GAS PROXY (AGORA BUSCANDO APENAS PELO GID)
+        // BUSCA CSV ATRAVÉS DO SEU GAS PROXY
         // ============================================================
         async function buscarCSV(gid) {
-            const proxyUrl = GAS_PROXY_URL + '?gid=' + gid;
-            
-            console.log('[Painel] Buscando dados direto do Apps Script. GID: ' + gid);
-            const resp = await fetch(proxyUrl, { redirect: 'follow' });
+            // URL de exportação oficial que NÃO ignora o GID
+            const exportUrl = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/export?format=csv&gid=${gid}&_=${Date.now()}`;
+            const proxyUrl = GAS_PROXY_URL + '?url=' + encodeURIComponent(exportUrl);
+
+            console.log('[Painel] Chamando GAS proxy para o GID: ' + gid);
+            const resp = await fetch(proxyUrl);
             if (!resp.ok) throw new Error('HTTP ' + resp.status);
 
             const texto = await resp.text();
             if (!texto.trim()) throw new Error('GAS retornou vazio.');
-            if (texto.trim().startsWith('<')) throw new Error('GAS retornou HTML em vez de CSV. Verifique a implantação.');
+            if (texto.trim().startsWith('<') || texto.includes('ERRO:')) {
+                throw new Error('O Apps Script retornou um erro ou HTML. Verifique a implantação.');
+            }
 
             return texto;
         }
@@ -342,10 +340,6 @@
 
                 for (let i = 0; i < CONFIG_ABAS.length; i++) {
                     const aba = CONFIG_ABAS[i];
-                    if (!aba.gid) {
-                        erros.push(`Aba "${aba.nome}": gid não configurado`);
-                        continue;
-                    }
                     loadingMsg.textContent = `Baixando aba "${aba.nome}" (${i + 1}/${CONFIG_ABAS.length})...`;
                     try {
                         const texto = await buscarCSV(aba.gid);
@@ -361,56 +355,54 @@
                 }
 
                 dados = todosDados;
-                console.log(`[Painel] TOTAL OFICIAL LIDO: ${totalEstoqueOficial}`);
+                console.log(`[Painel] TOTAL OFICIAL LIDO DAS PLANILHAS: ${totalEstoqueOficial}`);
                 renderizarDashboard();
             } catch (erro) {
                 console.error('[Painel] Falha:', erro);
                 document.getElementById('tela-loading').classList.add('oculto');
                 document.getElementById('tela-inicial').classList.remove('oculto');
                 document.getElementById('mensagem-erro').innerHTML =
-                    '<strong>Não foi possível carregar a planilha automaticamente.</strong><br>' +
+                    '<strong>Não foi possível carregar a planilha.</strong><br>' +
                     '<span style="font-size:12px;">Detalhe: ' + (erro.message || erro) + '</span>';
             }
         }
 
-        // ---------------- Fallback manual (TSV) ----------------
-        function parsearLinhasTSV(texto, padrao = {}) {
-            const linhas = texto.trim().split(/\r?\n/).filter(l => l.trim());
-            if (linhas.length < 2) throw new Error('Dados insuficientes.');
-            const cabecalhos = linhas[0].split('\t').map(normalizarCabecalho);
-            const resultado = [];
-            
-            for (let i = 1; i < linhas.length; i++) {
-                const valores = linhas[i].split('\t').map(v => v.trim());
-                const obj = {};
-                cabecalhos.forEach((c, idx) => obj[c] = valores[idx] || '');
-                
-                const itemUpper = String(obj['item'] || '').trim().toUpperCase();
-                
-                if (itemUpper === 'TOTAL' || itemUpper.startsWith('TOTAL')) {
-                    const est = numInt(obj['pecas_nao_vendidas']);
-                    totalEstoqueOficial += est;
-                    continue; 
-                }
-
-                if (!obj['item']) continue;
-                
-                const itemObj = construirItem(obj, padrao);
-                if (itemObj) resultado.push(itemObj);
-            }
-            return resultado;
-        }
-
+        // ---------------- Fallback manual ----------------
         function clicouBotao() {
             const texto = document.getElementById('caixa-dados').value;
             if (!texto.trim()) { alert('⚠️ Cole os dados primeiro!'); return; }
             totalEstoqueOficial = 0;
             try {
-                const dadosConvertidos = texto.includes('\t')
-                    ? parsearLinhasTSV(texto, {})
-                    : parsearLinhasCSV(texto, {});
-                if (dadosConvertidos.length === 0) throw new Error('Nenhuma linha válida.');
-                dados = dadosConvertidos;
+                const linhas = texto.trim().split(/\r?\n/).map(l => l.split('\t'));
+                const cabecalhos = linhas[0].map(normalizarCabecalho);
+                const resultado = [];
+                for(let i=1; i<linhas.length; i++) {
+                    const valores = linhas[i];
+                    const obj = {};
+                    cabecalhos.forEach((c, idx) => obj[c] = (valores[idx] || '').trim());
+                    if(String(obj['item'] || '').toUpperCase().includes('TOTAL')) {
+                        totalEstoqueOficial += numInt(obj['pecas_nao_vendidas']);
+                        continue;
+                    }
+                    if(!obj['item']) continue;
+                    const dataStr = obj['data_da_venda'] || obj['data'] || '';
+                    resultado.push({
+                        item: obj['item'],
+                        tipo: obj['tipo'] || extrairTipo(obj['item']),
+                        cor: obj['cor'] || 'Não informado',
+                        tamanho: obj['tamanho'] || 'Não informado',
+                        fornecedor: obj['fornecedor'] || 'Não informado',
+                        vendedora: obj['vendedora'] || 'Não informada',
+                        mes: extrairMes(dataStr),
+                        receita: converterMoeda(obj['valor_vendido_por_item']) * numInt(obj['pecas_vendidas']),
+                        custo_total: converterMoeda(obj['valor_comprado_por_item']) * numInt(obj['quantidade_comprada']),
+                        lucro: converterMoeda(obj['lucro_das_vendas'] || obj['lucro']),
+                        qtd_vendida: numInt(obj['pecas_vendidas']),
+                        estoque: numInt(obj['pecas_nao_vendidas'])
+                    });
+                }
+                if (resultado.length === 0) throw new Error('Nenhuma linha válida.');
+                dados = resultado;
                 renderizarDashboard();
             } catch (e) {
                 alert('❌ ' + (e.message || 'Erro ao processar.'));
