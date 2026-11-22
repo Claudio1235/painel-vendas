@@ -147,7 +147,9 @@
             </div>
         </div>
 
+        <!-- ÁREA DE DEBUG NA TELA -->
         <div class="card" style="text-align: center; margin-top: 24px;">
+            <div id="debug-info" style="color: #dc2626; font-weight: bold; font-size: 14px; margin-bottom: 15px;"></div>
             <button class="btn-secundario" onclick="voltar()">🔄 Carregar novos dados</button>
             <button class="btn-secundario" onclick="tentarCarregarPlanilha()">📥 Recarregar da planilha</button>
         </div>
@@ -155,17 +157,12 @@
 
     <script>
         // ============================================================
-        // CONFIGURAÇÃO
+        // CONFIGURAÇÃO DAS ABAS
         // ============================================================
-        // URL pública da planilha (base para montar o CSV de cada aba)
-        const SHEET_PUB_BASE = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTQ6uaRaYBhta9tKp2jxJNTtCMkSqqnAf6kc_AVdv0h1SrfHcJ78DXfXn2KujTYd_sLPcbHDXL69JGe/pub?output=csv';
-
-        // Seu Web App do Google Apps Script já publicado.
-        // Ele deve atuar como proxy: receber ?url=<URL_DO_CSV> e devolver o texto.
-        // (Se o seu GAS ainda não faz isso, veja a nota abaixo do código.)
+        // Note que agora a base não tem mais o ?output=csv no final
+        const SHEET_PUB_BASE = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTQ6uaRaYBhta9tKp2jxJNTtCMkSqqnAf6kc_AVdv0h1SrfHcJ78DXfXn2KujTYd_sLPcbHDXL69JGe/pub';
         const GAS_PROXY_URL = 'https://script.google.com/macros/s/AKfycbxay1JjpcmVdGQV0P6QHRiOKLA9V2pexleTwLWPxyDfQFwOlFWDw59aLpVg5grIFIaq/exec';
 
-        // GIDs das abas (obtidos manualmente)
         const CONFIG_ABAS = [
             { nome: 'fatelie', gid: '0',          padrao: {} },
             { nome: 'TLF',     gid: '1069955875', padrao: { fornecedor: 'TLF' } },
@@ -175,6 +172,7 @@
         let dados = [];
         let graficos = {};
         let abaAtual = 'total';
+        let totalEstoqueOficial = 0; 
 
         // ---------------- Utilidades ----------------
         function converterMoeda(v) {
@@ -261,11 +259,13 @@
 
         function construirItem(obj, padrao) {
             const item = obj['item'] || '';
-            if (!item || item.toUpperCase() === 'TOTAL') return null;
+            if (!item) return null;
+
             const tipoCol = obj['tipo'];
             const tipoDoCampo = (tipoCol && !/n[ãa]o\s*identificad/i.test(tipoCol) && tipoCol !== '—') ? tipoCol : null;
             const tipoFinal = padrao.tipo || tipoDoCampo || extrairTipo(item);
             const dataStr = obj['data_da_venda'] || obj['data'] || '';
+            
             return {
                 item,
                 tipo: tipoFinal,
@@ -276,9 +276,9 @@
                 mes: extrairMes(dataStr),
                 receita: converterMoeda(obj['valor_vendido_por_item']) * numInt(obj['pecas_vendidas']),
                 custo_total: converterMoeda(obj['valor_comprado_por_item']) * numInt(obj['quantidade_comprada']),
-                lucro: converterMoeda(obj['lucro_das_vendas']),
+                lucro: converterMoeda(obj['lucro_das_vendas'] || obj['lucro']),
                 qtd_vendida: numInt(obj['pecas_vendidas']),
-                estoque: numInt(obj['pecas_nao_vendidas'])
+                estoque: numInt(obj['quantidade_comprada']) - numInt(obj['pecas_vendidas'])
             };
         }
 
@@ -287,13 +287,28 @@
             if (linhas.length < 2) throw new Error('CSV com menos de 2 linhas.');
             const cabecalhos = linhas[0].map(normalizarCabecalho);
             const resultado = [];
+            
             for (let i = 1; i < linhas.length; i++) {
                 const valores = linhas[i];
                 if (!valores || valores.every(v => !v || !v.trim())) continue;
+                
                 const obj = {};
                 cabecalhos.forEach((c, idx) => obj[c] = (valores[idx] || '').trim());
-                const item = construirItem(obj, padrao);
-                if (item) resultado.push(item);
+                
+                const itemUpper = String(obj['item'] || '').trim().toUpperCase();
+                
+                // Se for a linha TOTAL, captura o valor e pula para a próxima linha
+                if (itemUpper === 'TOTAL' || itemUpper.startsWith('TOTAL')) {
+                    const est = numInt(obj['pecas_nao_vendidas']);
+                    console.log(`[Painel] Linha TOTAL encontrada na aba. Estoque lido: ${est}`);
+                    totalEstoqueOficial += est;
+                    continue; 
+                }
+
+                if (!obj['item']) continue;
+                
+                const itemObj = construirItem(obj, padrao);
+                if (itemObj) resultado.push(itemObj);
             }
             return resultado;
         }
@@ -303,23 +318,34 @@
             if (linhas.length < 2) throw new Error('Dados insuficientes.');
             const cabecalhos = linhas[0].split('\t').map(normalizarCabecalho);
             const resultado = [];
+            
             for (let i = 1; i < linhas.length; i++) {
                 const valores = linhas[i].split('\t').map(v => v.trim());
                 const obj = {};
                 cabecalhos.forEach((c, idx) => obj[c] = valores[idx] || '');
-                const item = construirItem(obj, padrao);
-                if (item) resultado.push(item);
+                
+                const itemUpper = String(obj['item'] || '').trim().toUpperCase();
+                
+                if (itemUpper === 'TOTAL' || itemUpper.startsWith('TOTAL')) {
+                    const est = numInt(obj['pecas_nao_vendidas']);
+                    totalEstoqueOficial += est;
+                    continue; 
+                }
+
+                if (!obj['item']) continue;
+                
+                const itemObj = construirItem(obj, padrao);
+                if (itemObj) resultado.push(itemObj);
             }
             return resultado;
         }
 
         // ============================================================
-        // BUSCA CSV ATRAVÉS DO SEU GAS PROXY (resolve CORS)
+        // BUSCA CSV ATRAVÉS DO SEU GAS PROXY (AQUI ESTÁ A CORREÇÃO DA URL)
         // ============================================================
         async function buscarCSV(gid) {
-            const targetUrl = SHEET_PUB_BASE + '&gid=' + gid + '&single=true';
-
-            // Monta a chamada ao seu Web App: ?url=<url_do_csv_codificada>
+            // Monta a URL EXATAMENTE como o Google exige: ?gid=...&single=true&output=csv
+            const targetUrl = `${SHEET_PUB_BASE}?gid=${gid}&single=true&output=csv&_=${Date.now()}`;
             const proxyUrl = GAS_PROXY_URL + '?url=' + encodeURIComponent(targetUrl);
 
             console.log('[Painel] Chamando GAS proxy: gid=' + gid);
@@ -328,9 +354,6 @@
 
             const texto = await resp.text();
             if (!texto.trim()) throw new Error('GAS retornou vazio.');
-            if (texto.trim().startsWith('<')) throw new Error('GAS retornou HTML (verifique o Web App).');
-
-            console.log('[Painel] GAS proxy gid=' + gid + ': OK (' + texto.length + ' chars)');
             return texto;
         }
 
@@ -342,6 +365,8 @@
             document.getElementById('tela-inicial').classList.add('oculto');
             document.getElementById('tela-dashboard').classList.add('oculto');
             const loadingMsg = document.getElementById('loading-msg');
+
+            totalEstoqueOficial = 0;
 
             try {
                 const todosDados = [];
@@ -358,7 +383,6 @@
                         const texto = await buscarCSV(aba.gid);
                         const dadosAba = parsearLinhasCSV(texto, aba.padrao);
                         todosDados.push(...dadosAba);
-                        console.log(`[Painel] Aba "${aba.nome}" (gid=${aba.gid}): ${dadosAba.length} linhas`);
                     } catch (e) {
                         erros.push(`Aba "${aba.nome}": ${e.message}`);
                     }
@@ -367,9 +391,9 @@
                 if (todosDados.length === 0) {
                     throw new Error('Nenhum dado carregado. Erros: ' + (erros.join(' | ') || 'nenhum'));
                 }
-                if (erros.length > 0) console.warn('[Painel] Avisos:', erros);
 
                 dados = todosDados;
+                console.log(`[Painel] TOTAL OFICIAL LIDO DAS PLANILHAS: ${totalEstoqueOficial}`);
                 renderizarDashboard();
             } catch (erro) {
                 console.error('[Painel] Falha:', erro);
@@ -377,9 +401,7 @@
                 document.getElementById('tela-inicial').classList.remove('oculto');
                 document.getElementById('mensagem-erro').innerHTML =
                     '<strong>Não foi possível carregar a planilha automaticamente.</strong><br>' +
-                    '<span style="font-size:12px;">Detalhe: ' + (erro.message || erro) + '</span><br><br>' +
-                    '<span style="font-size:12px;">Verifique no console (F12) as mensagens <code>[Painel]</code>. ' +
-                    'Se o GAS proxy retornar erro, confirme se ele está implantado como "Qualquer pessoa" e se aceita o parâmetro <code>url</code>.</span>';
+                    '<span style="font-size:12px;">Detalhe: ' + (erro.message || erro) + '</span>';
             }
         }
 
@@ -387,6 +409,7 @@
         function clicouBotao() {
             const texto = document.getElementById('caixa-dados').value;
             if (!texto.trim()) { alert('⚠️ Cole os dados primeiro!'); return; }
+            totalEstoqueOficial = 0;
             try {
                 const dadosConvertidos = texto.includes('\t')
                     ? parsearLinhasTSV(texto, {})
@@ -409,26 +432,11 @@
             const totalComprado = dados.reduce((s, d) => s + d.custo_total, 0);
             const totalVendido  = dados.reduce((s, d) => s + d.receita, 0);
             const totalQtd      = dados.reduce((s, d) => s + d.qtd_vendida, 0);
-            const totalEstoque  = dados.reduce((s, d) => s + d.estoque, 0);
+            
+            const somaLinhas = dados.reduce((s, d) => s + d.estoque, 0);
+            const totalEstoque  = totalEstoqueOficial > 0 ? totalEstoqueOficial : somaLinhas;
+            
             const totalLucro    = dados.reduce((s, d) => s + d.lucro, 0);
-
-            const mesesUnicos = ordenarMeses([...new Set(dados.map(d => d.mes))]);
-            let varComprado = { texto: '—', classe: 'neutro' };
-            let varVendido  = { texto: '—', classe: 'neutro' };
-            let varQtd      = { texto: '—', classe: 'neutro' };
-            let varEstoque  = { texto: '—', classe: 'neutro' };
-            let varLucro    = { texto: '—', classe: 'neutro' };
-
-            if (mesesUnicos.length >= 2) {
-                const mesAtual = mesesUnicos[mesesUnicos.length - 1];
-                const mesAnterior = mesesUnicos[mesesUnicos.length - 2];
-                const somaMes = (m, campo) => dados.filter(d => d.mes === m).reduce((s, d) => s + (d[campo] || 0), 0);
-                varComprado = calcularVariacao(somaMes(mesAtual, 'custo_total'), somaMes(mesAnterior, 'custo_total'));
-                varVendido  = calcularVariacao(somaMes(mesAtual, 'receita'),     somaMes(mesAnterior, 'receita'));
-                varQtd      = calcularVariacao(somaMes(mesAtual, 'qtd_vendida'), somaMes(mesAnterior, 'qtd_vendida'));
-                varEstoque  = calcularVariacao(somaMes(mesAtual, 'estoque'),     somaMes(mesAnterior, 'estoque'));
-                varLucro    = calcularVariacao(somaMes(mesAtual, 'lucro'),       somaMes(mesAnterior, 'lucro'));
-            }
 
             document.getElementById('k1').textContent = formatarMoeda(totalComprado);
             document.getElementById('k2').textContent = formatarMoeda(totalVendido);
@@ -436,16 +444,8 @@
             document.getElementById('k4').textContent = totalEstoque;
             document.getElementById('k5').textContent = formatarMoeda(totalLucro);
 
-            const updatePill = (id, data) => {
-                const el = document.getElementById(id);
-                el.textContent = data.texto;
-                el.className = 'kpi-variacao ' + data.classe;
-            };
-            updatePill('k1-var', varComprado);
-            updatePill('k2-var', varVendido);
-            updatePill('k3-var', varQtd);
-            updatePill('k4-var', varEstoque);
-            updatePill('k5-var', varLucro);
+            document.getElementById('debug-info').innerHTML = 
+                `[Diagnóstico] Soma das linhas: ${somaLinhas} | Linha TOTAL (Planilha): ${totalEstoqueOficial} | Valor Exibido: ${totalEstoque}`;
 
             document.getElementById('tela-loading').classList.add('oculto');
             document.getElementById('tela-inicial').classList.add('oculto');
@@ -479,7 +479,6 @@
             if (graficos.linha) { graficos.linha.destroy(); graficos.linha = null; }
 
             const meses = ordenarMeses([...new Set(dados.map(d => d.mes))]);
-            const paleta = ['#000000','#808080','#00BCD4','#795548','#87CEEB','#00008B','#90EE90','#006400','#FFD700','#FF0000','#800080','#EE82EE','#FFC0CB','#FFA500','#008080','#B22222','#4B0082','#32CD32','#FF1493','#FF7F50','#8B4513','#4169E1','#808000','#DA70D6','#A52A2A','#00FFFF','#2E8B57','#DC143C','#9400D3','#FFB6C1','#CD853F','#4682B4','#556B2F','#FF4500','#708090','#00FA9A','#DAA520','#DB7093','#191970','#8FBC8F'];
             const datasets = [];
 
             if (abaAtual === 'total') {
@@ -497,6 +496,8 @@
                 });
             } else {
                 const categorias = [...new Set(dados.map(d => d[abaAtual]))].sort();
+                const paleta = ['#000000','#808080','#00BCD4','#795548','#87CEEB','#00008B','#90EE90','#006400','#FFD700','#FF0000','#800080','#EE82EE','#FFC0CB','#FFA500','#008080','#B22222','#4B0082','#32CD32','#FF1493','#FF7F50','#8B4513','#4169E1','#808000','#DA70D6','#A52A2A','#00FFFF','#2E8B57','#DC143C','#9400D3','#FFB6C1','#CD853F','#4682B4','#556B2F','#FF4500','#708090','#00FA9A','#DAA520','#DB7093','#191970','#8FBC8F'];
+                
                 categorias.forEach((cat, i) => {
                     const serie = meses.map(m =>
                         dados.filter(d => d.mes === m && d[abaAtual] === cat).reduce((s, d) => s + d.lucro, 0)
