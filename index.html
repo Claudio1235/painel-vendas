@@ -11,14 +11,11 @@
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
         body { background: #f8fafc; padding: 24px; max-width: 1400px; margin: 0 auto; color: #1e293b; }
-        
         .card { background: white; padding: 24px; border-radius: 12px; margin-bottom: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.05), 0 1px 2px rgba(0,0,0,0.03); border: 1px solid #f1f5f9; }
         h2 { font-size: 16px; font-weight: 600; margin-bottom: 4px; color: #0f172a; }
         .subtitulo { font-size: 13px; color: #64748b; margin-bottom: 20px; }
-        
         .instrucoes { background: #e6f7ff; border-left: 3px solid #1890ff; padding: 12px; margin-bottom: 15px; font-size: 14px; line-height: 1.6; border-radius: 4px;}
         .instrucoes.erro { background: #fef2f2; border-left-color: #dc2626; color: #991b1b; }
-        
         textarea { width: 100%; height: 120px; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; margin-bottom: 16px; font-size: 13px; font-family: monospace; }
         button { padding: 10px 20px; border: none; border-radius: 8px; font-size: 14px; cursor: pointer; font-weight: 600; transition: all 0.2s; }
         .btn-principal { background: #3b82f6; color: white; }
@@ -26,8 +23,6 @@
         .btn-secundario { background: #f1f5f9; color: #334155; margin-left: 8px; }
         .btn-secundario:hover { background: #e2e8f0; }
         .oculto { display: none !important; }
-
-        /* Layout dos KPIs */
         .kpis { display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; margin-bottom: 24px; }
         .kpi-card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); border: 1px solid #f1f5f9; position: relative; }
         .kpi-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
@@ -35,31 +30,21 @@
         .kpi-icon { width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; background: #eff6ff; }
         .kpi-icon svg { width: 20px; height: 20px; stroke: #3b82f6; }
         .kpi-valor { font-size: 26px; font-weight: 700; color: #0f172a; margin-bottom: 12px; letter-spacing: -0.5px; }
-        
-        /* Pílulas de Variação */
         .kpi-variacao { display: inline-flex; align-items: center; gap: 4px; padding: 4px 8px; border-radius: 999px; font-size: 12px; font-weight: 600; }
-        .kpi-variacao svg { width: 14px; height: 14px; }
         .positivo { background: #dcfce7; color: #166534; }
         .negativo { background: #fee2e2; color: #991b1b; }
         .neutro { background: #f1f5f9; color: #475569; }
         .vs-texto { font-size: 12px; color: #94a3b8; font-weight: 400; margin-left: 4px; }
-
-        /* Controle Segmentado (Abas) */
         .abas-container { margin-bottom: 20px; }
         .abas { display: inline-flex; background: #f1f5f9; padding: 4px; border-radius: 8px; gap: 2px; flex-wrap: wrap; }
         .aba { padding: 6px 16px; font-size: 13px; font-weight: 500; cursor: pointer; border-radius: 6px; color: #64748b; transition: all 0.2s; }
         .aba.ativa { background: white; color: #0f172a; font-weight: 600; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
         .aba:hover:not(.ativa) { color: #334155; background: #e2e8f0; }
-        
-        /* Gráficos */
         .grafico { height: 300px; width: 100%; position: relative; }
         .grade-graficos { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
-
-        /* Loading */
         .loading { text-align: center; padding: 60px 20px; }
         .spinner { display: inline-block; width: 40px; height: 40px; border: 3px solid #e2e8f0; border-top-color: #3b82f6; border-radius: 50%; animation: spin 0.8s linear infinite; margin-bottom: 16px; }
         @keyframes spin { to { transform: rotate(360deg); } }
-        
         @media (max-width: 1024px) {
             .kpis { grid-template-columns: repeat(3, 1fr); }
             .grade-graficos { grid-template-columns: 1fr; }
@@ -71,14 +56,12 @@
 </head>
 <body>
 
-    <!-- Tela de Loading -->
     <div id="tela-loading" class="card loading">
         <div class="spinner"></div>
         <h2>Carregando dados da planilha...</h2>
         <p style="color:#64748b;font-size:13px;margin-top:8px;" id="loading-msg">Isso pode levar alguns segundos.</p>
     </div>
 
-    <!-- Tela Inicial (Fallback Manual) -->
     <div id="tela-inicial" class="card oculto">
         <h2>📊 Painel de Estoque e Vendas</h2>
         <div class="instrucoes erro" id="mensagem-erro">
@@ -98,90 +81,54 @@
         <button class="btn-secundario" onclick="tentarCarregarPlanilha()">🔄 Tentar novamente</button>
     </div>
 
-    <!-- Tela Dashboard -->
     <div id="tela-dashboard" class="oculto">
-        
-        <!-- KPIs Estilizados -->
         <div class="kpis">
             <div class="kpi-card">
                 <div class="kpi-header">
                     <div class="kpi-nome">Total Comprado</div>
-                    <div class="kpi-icon">
-                        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-                    </div>
+                    <div class="kpi-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
                 </div>
                 <div class="kpi-valor" id="k1">R$ 0</div>
-                <div>
-                    <span class="kpi-variacao neutro" id="k1-var">—</span>
-                    <span class="vs-texto">vs. mês anterior</span>
-                </div>
+                <div><span class="kpi-variacao neutro" id="k1-var">—</span><span class="vs-texto">vs. mês anterior</span></div>
             </div>
-
             <div class="kpi-card">
                 <div class="kpi-header">
                     <div class="kpi-nome">Total Vendido</div>
-                    <div class="kpi-icon" style="background:#f0fdf4;">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
-                    </div>
+                    <div class="kpi-icon" style="background:#f0fdf4;"><svg viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg></div>
                 </div>
                 <div class="kpi-valor" id="k2">R$ 0</div>
-                <div>
-                    <span class="kpi-variacao neutro" id="k2-var">—</span>
-                    <span class="vs-texto">vs. mês anterior</span>
-                </div>
+                <div><span class="kpi-variacao neutro" id="k2-var">—</span><span class="vs-texto">vs. mês anterior</span></div>
             </div>
-
             <div class="kpi-card">
                 <div class="kpi-header">
                     <div class="kpi-nome">Peças Vendidas</div>
-                    <div class="kpi-icon" style="background:#fffbeb;">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
-                    </div>
+                    <div class="kpi-icon" style="background:#fffbeb;"><svg viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg></div>
                 </div>
                 <div class="kpi-valor" id="k3">0</div>
-                <div>
-                    <span class="kpi-variacao neutro" id="k3-var">—</span>
-                    <span class="vs-texto">vs. mês anterior</span>
-                </div>
+                <div><span class="kpi-variacao neutro" id="k3-var">—</span><span class="vs-texto">vs. mês anterior</span></div>
             </div>
-
             <div class="kpi-card">
                 <div class="kpi-header">
                     <div class="kpi-nome">Estoque</div>
-                    <div class="kpi-icon" style="background:#fdf4ff;">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="#c026d3" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
-                    </div>
+                    <div class="kpi-icon" style="background:#fdf4ff;"><svg viewBox="0 0 24 24" fill="none" stroke="#c026d3" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg></div>
                 </div>
                 <div class="kpi-valor" id="k4">0</div>
-                <div>
-                    <span class="kpi-variacao neutro" id="k4-var">—</span>
-                    <span class="vs-texto">vs. mês anterior</span>
-                </div>
+                <div><span class="kpi-variacao neutro" id="k4-var">—</span><span class="vs-texto">vs. mês anterior</span></div>
             </div>
-
             <div class="kpi-card">
                 <div class="kpi-header">
                     <div class="kpi-nome">Lucro Total</div>
-                    <div class="kpi-icon" style="background:#f0fdfa;">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="#0d9488" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
-                    </div>
+                    <div class="kpi-icon" style="background:#f0fdfa;"><svg viewBox="0 0 24 24" fill="none" stroke="#0d9488" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg></div>
                 </div>
                 <div class="kpi-valor" id="k5">R$ 0</div>
-                <div>
-                    <span class="kpi-variacao neutro" id="k5-var">—</span>
-                    <span class="vs-texto">vs. mês anterior</span>
-                </div>
+                <div><span class="kpi-variacao neutro" id="k5-var">—</span><span class="vs-texto">vs. mês anterior</span></div>
             </div>
         </div>
 
-        <!-- Gráficos -->
         <div class="grade-graficos">
-            
-            <!-- Gráfico de Linha -->
             <div class="card">
                 <h2>Tendência mensal</h2>
                 <div class="subtitulo">Lucro — evolução mensal</div>
-                
                 <div class="abas-container">
                     <div class="abas">
                         <div class="aba ativa" onclick="trocarAba('total')" id="aba-total">Lucro Total</div>
@@ -191,19 +138,13 @@
                         <div class="aba" onclick="trocarAba('fornecedor')" id="aba-fornecedor">Por Fornecedor</div>
                     </div>
                 </div>
-                
                 <div class="grafico"><canvas id="grafico-linha"></canvas></div>
             </div>
-
-            <!-- Gráfico de Barras Empilhadas -->
             <div class="card">
                 <h2>Composição de Receita</h2>
                 <div class="subtitulo">Custo, Lucro, volume de vendas e estoque por mês</div>
-                <div class="grafico" style="margin-top: 46px;">
-                    <canvas id="grafico-barras"></canvas>
-                </div>
+                <div class="grafico" style="margin-top: 46px;"><canvas id="grafico-barras"></canvas></div>
             </div>
-
         </div>
 
         <div class="card" style="text-align: center; margin-top: 24px;">
@@ -213,44 +154,50 @@
     </div>
 
     <script>
-        // URL do seu Google Apps Script
-        const SHEET_CSV_URL = 'https://script.google.com/macros/s/AKfycbxay1JjpcmVdGQV0P6QHRiOKLA9V2pexleTwLWPxyDfQFwOlFWDw59aLpVg5grIFIaq/exec';
+        // ============================================================
+        // CONFIGURAÇÃO
+        // ============================================================
+        // URL pública da planilha (base para montar o CSV de cada aba)
+        const SHEET_PUB_BASE = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTQ6uaRaYBhta9tKp2jxJNTtCMkSqqnAf6kc_AVdv0h1SrfHcJ78DXfXn2KujTYd_sLPcbHDXL69JGe/pub?output=csv';
+
+        // Seu Web App do Google Apps Script já publicado.
+        // Ele deve atuar como proxy: receber ?url=<URL_DO_CSV> e devolver o texto.
+        // (Se o seu GAS ainda não faz isso, veja a nota abaixo do código.)
+        const GAS_PROXY_URL = 'https://script.google.com/macros/s/AKfycbxay1JjpcmVdGQV0P6QHRiOKLA9V2pexleTwLWPxyDfQFwOlFWDw59aLpVg5grIFIaq/exec';
+
+        // GIDs das abas (obtidos manualmente)
+        const CONFIG_ABAS = [
+            { nome: 'fatelie', gid: '0',          padrao: {} },
+            { nome: 'TLF',     gid: '1069955875', padrao: { fornecedor: 'TLF' } },
+            { nome: 'fitness', gid: '1425439600', padrao: { tipo: 'Fitness' } }
+        ];
 
         let dados = [];
         let graficos = {};
         let abaAtual = 'total';
 
+        // ---------------- Utilidades ----------------
         function converterMoeda(v) {
             if (v === null || v === undefined || v === '') return 0;
             const s = String(v).replace(/R\$\s?/g, '').trim();
-            if (s.includes(',')) {
-                return parseFloat(s.replace(/\./g, '').replace(',', '.')) || 0;
-            }
+            if (s.includes(',')) return parseFloat(s.replace(/\./g, '').replace(',', '.')) || 0;
             return parseFloat(s) || 0;
         }
-
         function formatarMoeda(v) {
             const inteiro = Math.round(v);
             const s = Math.abs(inteiro).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
             return (inteiro < 0 ? '-R$ ' : 'R$ ') + s;
         }
-
         function normalizarCabecalho(s) {
-            return String(s || '')
-                .replace(/\uFEFF/g, '') 
-                .trim()
-                .toLowerCase()
-                .replace(/[\u00A0\u2007\u202F]/g, ' ')
-                .replace(/\s+/g, '_')
-                .normalize('NFD')
-                .replace(/[\u0300-\u036f]/g, '');
+            return String(s || '').replace(/\uFEFF/g, '').trim().toLowerCase()
+                .replace(/[\u00A0\u2007\u202F]/g, ' ').replace(/\s+/g, '_')
+                .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
         }
-
         function extrairMes(dataStr) {
             if (!dataStr) return 'Sem data';
             const p = String(dataStr).trim().split(/[-\/\.]/);
             if (p.length >= 3) {
-                const meses = ['', 'Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+                const meses = ['', 'Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
                 let ano, mes;
                 if (p[0].length === 4) { ano = p[0]; mes = parseInt(p[1]); }
                 else if (p[2].length === 4) { mes = parseInt(p[1]); ano = p[2]; }
@@ -260,7 +207,6 @@
             }
             return dataStr;
         }
-
         function extrairTipo(nome) {
             if (!nome) return 'Outros';
             const t = String(nome).toLowerCase();
@@ -274,44 +220,32 @@
             if (t.includes('lenço') || t.includes('lenco')) return 'Lenço';
             return 'Outros';
         }
-
-        function numInt(v) {
-            return parseInt(String(v || '').replace(/[^0-9-]/g, '')) || 0;
-        }
-
+        function numInt(v) { return parseInt(String(v || '').replace(/[^0-9-]/g, '')) || 0; }
         function calcularVariacao(valorAtual, valorAnterior) {
-            if (valorAnterior === 0) return { texto: '0%', classe: 'neutro', icon: '—' };
+            if (valorAnterior === 0) return { texto: '0%', classe: 'neutro' };
             const perc = ((valorAtual - valorAnterior) / valorAnterior) * 100;
             const isPos = perc >= 0;
             const classe = perc > 0 ? 'positivo' : perc < 0 ? 'negativo' : 'neutro';
-            const setinha = isPos ? '↑' : '↓';
-            return { texto: `${setinha} ${Math.abs(perc).toFixed(1).replace('.', ',')}%`, classe };
+            return { texto: `${isPos ? '↑' : '↓'} ${Math.abs(perc).toFixed(1).replace('.', ',')}%`, classe };
         }
-
         function ordenarMeses(meses) {
-            const ordem = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+            const ordem = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
             return meses.sort((a, b) => {
-                const [ma, ya] = a.split('/');
-                const [mb, yb] = b.split('/');
-                const yaN = parseInt(ya) || 0;
-                const ybN = parseInt(yb) || 0;
+                const [ma, ya] = a.split('/'); const [mb, yb] = b.split('/');
+                const yaN = parseInt(ya) || 0; const ybN = parseInt(yb) || 0;
                 if (yaN !== ybN) return yaN - ybN;
                 return ordem.indexOf(ma) - ordem.indexOf(mb);
             });
         }
 
+        // ---------------- Parsing CSV/TSV ----------------
         function parseCSV(texto) {
-            const linhas = [];
-            let campo = '';
-            let linha = [];
-            let dentroAspas = false;
-
+            const linhas = []; let campo = ''; let linha = []; let dentroAspas = false;
             for (let i = 0; i < texto.length; i++) {
                 const c = texto[i];
                 if (dentroAspas) {
                     if (c === '"') {
-                        if (texto[i + 1] === '"') { campo += '"'; i++; }
-                        else dentroAspas = false;
+                        if (texto[i + 1] === '"') { campo += '"'; i++; } else dentroAspas = false;
                     } else campo += c;
                 } else {
                     if (c === '"') dentroAspas = true;
@@ -325,128 +259,152 @@
             return linhas;
         }
 
+        function construirItem(obj, padrao) {
+            const item = obj['item'] || '';
+            if (!item || item.toUpperCase() === 'TOTAL') return null;
+            const tipoCol = obj['tipo'];
+            const tipoDoCampo = (tipoCol && !/n[ãa]o\s*identificad/i.test(tipoCol) && tipoCol !== '—') ? tipoCol : null;
+            const tipoFinal = padrao.tipo || tipoDoCampo || extrairTipo(item);
+            const dataStr = obj['data_da_venda'] || obj['data'] || '';
+            return {
+                item,
+                tipo: tipoFinal,
+                cor: obj['cor'] || 'Não informado',
+                tamanho: obj['tamanho'] || 'Não informado',
+                fornecedor: padrao.fornecedor || obj['fornecedor'] || 'Não informado',
+                vendedora: obj['vendedora'] || 'Não informada',
+                mes: extrairMes(dataStr),
+                receita: converterMoeda(obj['valor_vendido_por_item']) * numInt(obj['pecas_vendidas']),
+                custo_total: converterMoeda(obj['valor_comprado_por_item']) * numInt(obj['quantidade_comprada']),
+                lucro: converterMoeda(obj['lucro_das_vendas']),
+                qtd_vendida: numInt(obj['pecas_vendidas']),
+                estoque: numInt(obj['pecas_nao_vendidas'])
+            };
+        }
+
+        function parsearLinhasCSV(texto, padrao = {}) {
+            const linhas = parseCSV(texto);
+            if (linhas.length < 2) throw new Error('CSV com menos de 2 linhas.');
+            const cabecalhos = linhas[0].map(normalizarCabecalho);
+            const resultado = [];
+            for (let i = 1; i < linhas.length; i++) {
+                const valores = linhas[i];
+                if (!valores || valores.every(v => !v || !v.trim())) continue;
+                const obj = {};
+                cabecalhos.forEach((c, idx) => obj[c] = (valores[idx] || '').trim());
+                const item = construirItem(obj, padrao);
+                if (item) resultado.push(item);
+            }
+            return resultado;
+        }
+
+        function parsearLinhasTSV(texto, padrao = {}) {
+            const linhas = texto.trim().split(/\r?\n/).filter(l => l.trim());
+            if (linhas.length < 2) throw new Error('Dados insuficientes.');
+            const cabecalhos = linhas[0].split('\t').map(normalizarCabecalho);
+            const resultado = [];
+            for (let i = 1; i < linhas.length; i++) {
+                const valores = linhas[i].split('\t').map(v => v.trim());
+                const obj = {};
+                cabecalhos.forEach((c, idx) => obj[c] = valores[idx] || '');
+                const item = construirItem(obj, padrao);
+                if (item) resultado.push(item);
+            }
+            return resultado;
+        }
+
+        // ============================================================
+        // BUSCA CSV ATRAVÉS DO SEU GAS PROXY (resolve CORS)
+        // ============================================================
+        async function buscarCSV(gid) {
+            const targetUrl = SHEET_PUB_BASE + '&gid=' + gid + '&single=true';
+
+            // Monta a chamada ao seu Web App: ?url=<url_do_csv_codificada>
+            const proxyUrl = GAS_PROXY_URL + '?url=' + encodeURIComponent(targetUrl);
+
+            console.log('[Painel] Chamando GAS proxy: gid=' + gid);
+            const resp = await fetch(proxyUrl, { redirect: 'follow' });
+            if (!resp.ok) throw new Error('HTTP ' + resp.status);
+
+            const texto = await resp.text();
+            if (!texto.trim()) throw new Error('GAS retornou vazio.');
+            if (texto.trim().startsWith('<')) throw new Error('GAS retornou HTML (verifique o Web App).');
+
+            console.log('[Painel] GAS proxy gid=' + gid + ': OK (' + texto.length + ' chars)');
+            return texto;
+        }
+
+        // ============================================================
+        // CARREGAMENTO PRINCIPAL
+        // ============================================================
         async function tentarCarregarPlanilha() {
             document.getElementById('tela-loading').classList.remove('oculto');
             document.getElementById('tela-inicial').classList.add('oculto');
             document.getElementById('tela-dashboard').classList.add('oculto');
-            document.getElementById('loading-msg').textContent = 'Baixando planilha...';
-
-            const url = SHEET_CSV_URL + (SHEET_CSV_URL.includes('?') ? '&' : '?') + '_=' + Date.now(); 
+            const loadingMsg = document.getElementById('loading-msg');
 
             try {
-                const resposta = await fetch(url, { redirect: 'follow' });
-                if (!resposta.ok) throw new Error(`HTTP ${resposta.status} - ${resposta.statusText}`);
-                const texto = await resposta.text();
-                if (!texto.trim()) throw new Error('A planilha retornou vazia.');
-                if (texto.trim().startsWith('<')) throw new Error('O Apps Script retornou HTML. Verifique a implantação.');
+                const todosDados = [];
+                const erros = [];
 
-                document.getElementById('loading-msg').textContent = 'Processando dados...';
-                processarCSV(texto);
+                for (let i = 0; i < CONFIG_ABAS.length; i++) {
+                    const aba = CONFIG_ABAS[i];
+                    if (!aba.gid) {
+                        erros.push(`Aba "${aba.nome}": gid não configurado`);
+                        continue;
+                    }
+                    loadingMsg.textContent = `Baixando aba "${aba.nome}" (${i + 1}/${CONFIG_ABAS.length})...`;
+                    try {
+                        const texto = await buscarCSV(aba.gid);
+                        const dadosAba = parsearLinhasCSV(texto, aba.padrao);
+                        todosDados.push(...dadosAba);
+                        console.log(`[Painel] Aba "${aba.nome}" (gid=${aba.gid}): ${dadosAba.length} linhas`);
+                    } catch (e) {
+                        erros.push(`Aba "${aba.nome}": ${e.message}`);
+                    }
+                }
 
+                if (todosDados.length === 0) {
+                    throw new Error('Nenhum dado carregado. Erros: ' + (erros.join(' | ') || 'nenhum'));
+                }
+                if (erros.length > 0) console.warn('[Painel] Avisos:', erros);
+
+                dados = todosDados;
+                renderizarDashboard();
             } catch (erro) {
                 console.error('[Painel] Falha:', erro);
-                const msg = erro.message || String(erro);
                 document.getElementById('tela-loading').classList.add('oculto');
                 document.getElementById('tela-inicial').classList.remove('oculto');
                 document.getElementById('mensagem-erro').innerHTML =
                     '<strong>Não foi possível carregar a planilha automaticamente.</strong><br>' +
-                    '<span style="font-size:12px;">Detalhe: ' + msg + '</span><br>' +
-                    '<span style="font-size:12px;">Dica: Verifique se o Apps Script está publicado como "Aplicativo da web".</span>';
+                    '<span style="font-size:12px;">Detalhe: ' + (erro.message || erro) + '</span><br><br>' +
+                    '<span style="font-size:12px;">Verifique no console (F12) as mensagens <code>[Painel]</code>. ' +
+                    'Se o GAS proxy retornar erro, confirme se ele está implantado como "Qualquer pessoa" e se aceita o parâmetro <code>url</code>.</span>';
             }
         }
 
-        function processarCSV(texto) {
-            const linhas = parseCSV(texto);
-            if (linhas.length < 2) throw new Error('CSV com menos de 2 linhas.');
-
-            const cabecalhos = linhas[0].map(normalizarCabecalho);
-            const dadosConvertidos = [];
-
-            for (let i = 1; i < linhas.length; i++) {
-                const valores = linhas[i];
-                if (!valores || valores.every(v => !v || !v.trim())) continue;
-
-                const obj = {};
-                cabecalhos.forEach((c, idx) => obj[c] = (valores[idx] || '').trim());
-
-                const item = obj['item'] || '';
-                if (!item || item.toUpperCase() === 'TOTAL') continue;
-
-                const tipoCol = obj['tipo'];
-                const tipoFinal = (tipoCol && !/n[ãa]o\s*identificad/i.test(tipoCol) && tipoCol !== '—')
-                    ? tipoCol : extrairTipo(item);
-
-                const dataStr = obj['data_da_venda'] || obj['data'] || '';
-
-                dadosConvertidos.push({
-                    item,
-                    tipo: tipoFinal,
-                    cor: obj['cor'] || 'Não informado',
-                    tamanho: obj['tamanho'] || 'Não informado',
-                    fornecedor: obj['fornecedor'] || 'Não informado',
-                    vendedora: obj['vendedora'] || 'Não informada',
-                    mes: extrairMes(dataStr),
-                    receita: converterMoeda(obj['valor_vendido_por_item']) * numInt(obj['pecas_vendidas']),
-                    custo_total: converterMoeda(obj['valor_comprado_por_item']) * numInt(obj['quantidade_comprada']),
-                    lucro: converterMoeda(obj['lucro_das_vendas']),
-                    qtd_vendida: numInt(obj['pecas_vendidas']),
-                    estoque: numInt(obj['pecas_nao_vendidas'])
-                });
-            }
-
-            if (dadosConvertidos.length === 0) throw new Error('Nenhuma linha válida.');
-            dados = dadosConvertidos;
-            renderizarDashboard();
-        }
-
+        // ---------------- Fallback manual ----------------
         function clicouBotao() {
             const texto = document.getElementById('caixa-dados').value;
             if (!texto.trim()) { alert('⚠️ Cole os dados primeiro!'); return; }
             try {
-                if (texto.includes('\t')) processarTSV(texto);
-                else processarCSV(texto);
+                const dadosConvertidos = texto.includes('\t')
+                    ? parsearLinhasTSV(texto, {})
+                    : parsearLinhasCSV(texto, {});
+                if (dadosConvertidos.length === 0) throw new Error('Nenhuma linha válida.');
+                dados = dadosConvertidos;
+                renderizarDashboard();
             } catch (e) {
                 alert('❌ ' + (e.message || 'Erro ao processar.'));
             }
         }
 
-        function processarTSV(texto) {
-            const linhas = texto.trim().split(/\r?\n/).filter(l => l.trim());
-            if (linhas.length < 2) throw new Error('Dados insuficientes.');
-            const cabecalhos = linhas[0].split('\t').map(normalizarCabecalho);
-            const dadosConvertidos = [];
-            
-            for (let i = 1; i < linhas.length; i++) {
-                const valores = linhas[i].split('\t').map(v => v.trim());
-                const obj = {};
-                cabecalhos.forEach((c, idx) => obj[c] = valores[idx] || '');
-                const item = obj['item'] || '';
-                if (!item || item.toUpperCase() === 'TOTAL') continue;
-                
-                const tipoCol = obj['tipo'];
-                const tipoFinal = (tipoCol && !/n[ãa]o\s*identificad/i.test(tipoCol) && tipoCol !== '—')
-                    ? tipoCol : extrairTipo(item);
-                    
-                dadosConvertidos.push({
-                    item,
-                    tipo: tipoFinal,
-                    cor: obj['cor'] || 'Não informado',
-                    tamanho: obj['tamanho'] || 'Não informado',
-                    fornecedor: obj['fornecedor'] || 'Não informado',
-                    vendedora: obj['vendedora'] || 'Não informada',
-                    mes: extrairMes(obj['data_da_venda'] || obj['data'] || ''),
-                    receita: converterMoeda(obj['valor_vendido_por_item']) * numInt(obj['pecas_vendidas']),
-                    custo_total: converterMoeda(obj['valor_comprado_por_item']) * numInt(obj['quantidade_comprada']),
-                    lucro: converterMoeda(obj['lucro_das_vendas']),
-                    qtd_vendida: numInt(obj['pecas_vendidas']),
-                    estoque: numInt(obj['pecas_nao_vendidas'])
-                });
-            }
-            if (dadosConvertidos.length === 0) throw new Error('Nenhuma linha válida.');
-            dados = dadosConvertidos;
-            renderizarDashboard();
+        function voltar() {
+            document.getElementById('tela-dashboard').classList.add('oculto');
+            document.getElementById('tela-inicial').classList.remove('oculto');
         }
 
+        // ---------------- Render ----------------
         function renderizarDashboard() {
             const totalComprado = dados.reduce((s, d) => s + d.custo_total, 0);
             const totalVendido  = dados.reduce((s, d) => s + d.receita, 0);
@@ -455,7 +413,6 @@
             const totalLucro    = dados.reduce((s, d) => s + d.lucro, 0);
 
             const mesesUnicos = ordenarMeses([...new Set(dados.map(d => d.mes))]);
-
             let varComprado = { texto: '—', classe: 'neutro' };
             let varVendido  = { texto: '—', classe: 'neutro' };
             let varQtd      = { texto: '—', classe: 'neutro' };
@@ -463,10 +420,9 @@
             let varLucro    = { texto: '—', classe: 'neutro' };
 
             if (mesesUnicos.length >= 2) {
-                const mesAtual    = mesesUnicos[mesesUnicos.length - 1];
+                const mesAtual = mesesUnicos[mesesUnicos.length - 1];
                 const mesAnterior = mesesUnicos[mesesUnicos.length - 2];
                 const somaMes = (m, campo) => dados.filter(d => d.mes === m).reduce((s, d) => s + (d[campo] || 0), 0);
-                
                 varComprado = calcularVariacao(somaMes(mesAtual, 'custo_total'), somaMes(mesAnterior, 'custo_total'));
                 varVendido  = calcularVariacao(somaMes(mesAtual, 'receita'),     somaMes(mesAnterior, 'receita'));
                 varQtd      = calcularVariacao(somaMes(mesAtual, 'qtd_vendida'), somaMes(mesAnterior, 'qtd_vendida'));
@@ -480,12 +436,11 @@
             document.getElementById('k4').textContent = totalEstoque;
             document.getElementById('k5').textContent = formatarMoeda(totalLucro);
 
-            function updatePill(id, data) {
+            const updatePill = (id, data) => {
                 const el = document.getElementById(id);
                 el.textContent = data.texto;
                 el.className = 'kpi-variacao ' + data.classe;
-            }
-
+            };
             updatePill('k1-var', varComprado);
             updatePill('k2-var', varVendido);
             updatePill('k3-var', varQtd);
@@ -507,7 +462,6 @@
             atualizarGraficoLucro();
         }
 
-        // Configurações globais do Chart.js
         Chart.defaults.font.family = "'Inter', sans-serif";
         Chart.defaults.color = '#94a3b8';
         Chart.defaults.plugins.tooltip.backgroundColor = '#0f172a';
@@ -525,51 +479,7 @@
             if (graficos.linha) { graficos.linha.destroy(); graficos.linha = null; }
 
             const meses = ordenarMeses([...new Set(dados.map(d => d.mes))]);
-            
-            // PALETA ESTENDIDA COM MAIS DE 35 CORES DISTINTAS
-            const paleta = [
-                '#000000', // Preto
-                '#808080', // Cinza
-                '#00BCD4', // Ciano
-                '#795548', // Marrom
-                '#87CEEB', // Azul Claro
-                '#00008B', // Azul Escuro
-                '#90EE90', // Verde Claro
-                '#006400', // Verde Escuro
-                '#FFD700', // Amarelo/Dourado
-                '#FF0000', // Vermelho
-                '#800080', // Roxo
-                '#EE82EE', // Violeta
-                '#FFC0CB', // Rosa
-                '#FFA500', // Laranja
-                '#008080', // Azul Petróleo
-                '#B22222', // Vermelho Tijolo
-                '#4B0082', // Índigo
-                '#32CD32', // Verde Limão
-                '#FF1493', // Rosa Choque
-                '#FF7F50', // Coral
-                '#8B4513', // Marrom Clássico
-                '#4169E1', // Azul Royal
-                '#808000', // Verde Oliva
-                '#DA70D6', // Orquídea
-                '#A52A2A', // Marrom Escuro
-                '#00FFFF', // Ciano Neon
-                '#2E8B57', // Verde Mar
-                '#DC143C', // Carmesim
-                '#9400D3', // Roxo Escuro
-                '#FFB6C1', // Rosa Claro
-                '#CD853F', // Marrom Claro
-                '#4682B4', // Azul Aço
-                '#556B2F', // Verde Musgo
-                '#FF4500', // Laranja Avermelhado
-                '#708090', // Cinza Ardósia
-                '#00FA9A', // Verde Menta
-                '#DAA520', // Dourado Escuro
-                '#DB7093', // Rosa Pálido
-                '#191970', // Azul Meia-Noite
-                '#8FBC8F'  // Verde Cinza
-            ];
-            
+            const paleta = ['#000000','#808080','#00BCD4','#795548','#87CEEB','#00008B','#90EE90','#006400','#FFD700','#FF0000','#800080','#EE82EE','#FFC0CB','#FFA500','#008080','#B22222','#4B0082','#32CD32','#FF1493','#FF7F50','#8B4513','#4169E1','#808000','#DA70D6','#A52A2A','#00FFFF','#2E8B57','#DC143C','#9400D3','#FFB6C1','#CD853F','#4682B4','#556B2F','#FF4500','#708090','#00FA9A','#DAA520','#DB7093','#191970','#8FBC8F'];
             const datasets = [];
 
             if (abaAtual === 'total') {
@@ -577,43 +487,28 @@
                 const gradient = ctx.createLinearGradient(0, 0, 0, 300);
                 gradient.addColorStop(0, 'rgba(59, 130, 246, 0.15)');
                 gradient.addColorStop(1, 'rgba(59, 130, 246, 0)');
-
                 datasets.push({
                     label: 'Lucro Total',
                     data: meses.map(m => dados.filter(d => d.mes === m).reduce((s, d) => s + d.lucro, 0)),
-                    borderColor: '#3b82f6',
-                    backgroundColor: gradient,
-                    fill: true, 
-                    tension: 0.4, 
-                    borderWidth: 2,
-                    pointRadius: 3,
-                    pointHoverRadius: 6,
-                    pointBackgroundColor: '#fff',
-                    pointBorderColor: '#3b82f6',
-                    pointBorderWidth: 2
+                    borderColor: '#3b82f6', backgroundColor: gradient,
+                    fill: true, tension: 0.4, borderWidth: 2,
+                    pointRadius: 3, pointHoverRadius: 6,
+                    pointBackgroundColor: '#fff', pointBorderColor: '#3b82f6', pointBorderWidth: 2
                 });
             } else {
                 const categorias = [...new Set(dados.map(d => d[abaAtual]))].sort();
                 categorias.forEach((cat, i) => {
                     const serie = meses.map(m =>
-                        dados.filter(d => d.mes === m && d[abaAtual] === cat)
-                             .reduce((s, d) => s + d.lucro, 0)
+                        dados.filter(d => d.mes === m && d[abaAtual] === cat).reduce((s, d) => s + d.lucro, 0)
                     );
                     if (serie.some(v => v !== 0)) {
-                        const cor = paleta[i % paleta.length]; // Garante que a cor não se repita até esgotar a paleta
+                        const cor = paleta[i % paleta.length];
                         datasets.push({
-                            label: cat,
-                            data: serie,
-                            borderColor: cor,
-                            backgroundColor: 'transparent',
-                            fill: false, 
-                            tension: 0.4, 
-                            borderWidth: 2,
-                            pointRadius: 2,
-                            pointHoverRadius: 5,
-                            pointBackgroundColor: '#fff',
-                            pointBorderColor: cor,
-                            pointBorderWidth: 2
+                            label: cat, data: serie,
+                            borderColor: cor, backgroundColor: 'transparent',
+                            fill: false, tension: 0.4, borderWidth: 2,
+                            pointRadius: 2, pointHoverRadius: 5,
+                            pointBackgroundColor: '#fff', pointBorderColor: cor, pointBorderWidth: 2
                         });
                     }
                 });
@@ -629,19 +524,11 @@
                         tooltip: { callbacks: { label: (c) => `${c.dataset.label}: ${formatarMoeda(c.parsed.y)}` } }
                     },
                     scales: {
-                        x: {
-                            grid: { display: false, drawBorder: false },
-                            ticks: { padding: 10, font: { size: 12 } }
-                        },
+                        x: { grid: { display: false, drawBorder: false }, ticks: { padding: 10, font: { size: 12 } } },
                         y: {
-                            beginAtZero: true,
-                            border: { display: false },
+                            beginAtZero: true, border: { display: false },
                             grid: { color: '#f1f5f9', drawTicks: false },
-                            ticks: { 
-                                padding: 10, 
-                                font: { size: 12 },
-                                callback: (v) => 'R$ ' + Number(v).toLocaleString('pt-BR') 
-                            }
+                            ticks: { padding: 10, font: { size: 12 }, callback: (v) => 'R$ ' + Number(v).toLocaleString('pt-BR') }
                         }
                     },
                     interaction: { mode: 'index', intersect: false }
@@ -655,60 +542,24 @@
             if (graficos.barras) { graficos.barras.destroy(); graficos.barras = null; }
 
             const meses = ordenarMeses([...new Set(dados.map(d => d.mes))]);
-            
             const receitas = meses.map(m => dados.filter(d => d.mes === m).reduce((s, d) => s + d.receita, 0));
             const lucros   = meses.map(m => dados.filter(d => d.mes === m).reduce((s, d) => s + d.lucro, 0));
             const custos   = receitas.map((rec, i) => Math.max(0, rec - lucros[i]));
             const pecas    = meses.map(m => dados.filter(d => d.mes === m).reduce((s, d) => s + d.qtd_vendida, 0));
             const estoques = meses.map(m => dados.filter(d => d.mes === m).reduce((s, d) => s + d.estoque, 0));
 
-            const corCusto = '#bfdbfe';  
-            const corLucro = '#3b82f6';  
-            const corPecas = '#0f172a';  
-            const corEstoque = '#94a3b8';
+            const corCusto = '#bfdbfe'; const corLucro = '#3b82f6';
+            const corPecas = '#0f172a'; const corEstoque = '#94a3b8';
 
             graficos.barras = new Chart(canvas.getContext('2d'), {
                 type: 'bar',
                 data: {
                     labels: meses,
                     datasets: [
-                        { 
-                            label: 'Custo',   
-                            data: custos,    
-                            backgroundColor: corCusto, 
-                            borderRadius: { topLeft: 4, topRight: 4 }, 
-                            yAxisID: 'y',
-                            stack: 'Stack 0' 
-                        },
-                        { 
-                            label: 'Lucro',   
-                            data: lucros,   
-                            backgroundColor: corLucro, 
-                            borderRadius: { topLeft: 4, topRight: 4 }, 
-                            yAxisID: 'y',
-                            stack: 'Stack 0' 
-                        },
-                        { 
-                            label: 'Peças Vendidas', 
-                            data: pecas,    
-                            backgroundColor: corPecas, 
-                            borderRadius: { topLeft: 4, topRight: 4 }, 
-                            yAxisID: 'y1',
-                            stack: 'Stack 1' 
-                        },
-                        {
-                            type: 'line',
-                            label: 'Estoque',
-                            data: estoques,
-                            borderColor: corEstoque,
-                            backgroundColor: corEstoque,
-                            borderWidth: 1.5,
-                            fill: false,
-                            tension: 0.3,
-                            pointRadius: 0,
-                            pointHoverRadius: 4,
-                            yAxisID: 'y1'
-                        }
+                        { label: 'Custo', data: custos, backgroundColor: corCusto, borderRadius: { topLeft: 4, topRight: 4 }, yAxisID: 'y', stack: 'Stack 0' },
+                        { label: 'Lucro', data: lucros, backgroundColor: corLucro, borderRadius: { topLeft: 4, topRight: 4 }, yAxisID: 'y', stack: 'Stack 0' },
+                        { label: 'Peças Vendidas', data: pecas, backgroundColor: corPecas, borderRadius: { topLeft: 4, topRight: 4 }, yAxisID: 'y1', stack: 'Stack 1' },
+                        { type: 'line', label: 'Estoque', data: estoques, borderColor: corEstoque, backgroundColor: corEstoque, borderWidth: 1.5, fill: false, tension: 0.3, pointRadius: 0, pointHoverRadius: 4, yAxisID: 'y1' }
                     ]
                 },
                 options: {
@@ -719,40 +570,23 @@
                         tooltip: {
                             callbacks: {
                                 label: (c) => {
-                                    if (c.dataset.label === 'Custo' || c.dataset.label === 'Lucro') {
-                                        return `${c.dataset.label}: ${formatarMoeda(c.parsed.y)}`;
-                                    }
+                                    if (c.dataset.label === 'Custo' || c.dataset.label === 'Lucro') return `${c.dataset.label}: ${formatarMoeda(c.parsed.y)}`;
                                     return `${c.dataset.label}: ${c.parsed.y}`;
                                 }
                             }
                         }
                     },
                     scales: {
-                        x: {
-                            grid: { display: false, drawBorder: false },
-                            ticks: { padding: 10, font: { size: 12 } }
-                        },
+                        x: { grid: { display: false, drawBorder: false }, ticks: { padding: 10, font: { size: 12 } } },
                         y: {
-                            position: 'left',
-                            border: { display: false },
+                            position: 'left', border: { display: false },
                             grid: { color: '#f1f5f9', drawTicks: false },
-                            ticks: { 
-                                padding: 10, 
-                                font: { size: 12 },
-                                callback: (v) => 'R$ ' + Number(v).toLocaleString('pt-BR') 
-                            }
+                            ticks: { padding: 10, font: { size: 12 }, callback: (v) => 'R$ ' + Number(v).toLocaleString('pt-BR') }
                         },
                         y1: {
-                            position: 'right',
-                            beginAtZero: true,
-                            border: { display: false },
-                            grid: { display: false }, 
-                            ticks: { 
-                                padding: 10, 
-                                color: corPecas, 
-                                font: { size: 12, weight: '600' }, 
-                                precision: 0 
-                            },
+                            position: 'right', beginAtZero: true, border: { display: false },
+                            grid: { display: false },
+                            ticks: { padding: 10, color: corPecas, font: { size: 12, weight: '600' }, precision: 0 },
                             title: { display: true, text: 'Qtd (Peças/Estoque)', color: corPecas, font: { size: 11, weight: '500' } }
                         }
                     }
