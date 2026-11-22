@@ -147,7 +147,6 @@
             </div>
         </div>
 
-        <!-- ÁREA DE DEBUG NA TELA -->
         <div class="card" style="text-align: center; margin-top: 24px;">
             <div id="debug-info" style="color: #dc2626; font-weight: bold; font-size: 14px; margin-bottom: 15px;"></div>
             <button class="btn-secundario" onclick="voltar()">🔄 Carregar novos dados</button>
@@ -159,8 +158,6 @@
         // ============================================================
         // CONFIGURAÇÃO DAS ABAS
         // ============================================================
-        // Note que agora a base não tem mais o ?output=csv no final
-        const SHEET_PUB_BASE = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTQ6uaRaYBhta9tKp2jxJNTtCMkSqqnAf6kc_AVdv0h1SrfHcJ78DXfXn2KujTYd_sLPcbHDXL69JGe/pub';
         const GAS_PROXY_URL = 'https://script.google.com/macros/s/AKfycbxay1JjpcmVdGQV0P6QHRiOKLA9V2pexleTwLWPxyDfQFwOlFWDw59aLpVg5grIFIaq/exec';
 
         const CONFIG_ABAS = [
@@ -297,35 +294,6 @@
                 
                 const itemUpper = String(obj['item'] || '').trim().toUpperCase();
                 
-                // Se for a linha TOTAL, captura o valor e pula para a próxima linha
-                if (itemUpper === 'TOTAL' || itemUpper.startsWith('TOTAL')) {
-                    const est = numInt(obj['pecas_nao_vendidas']);
-                    console.log(`[Painel] Linha TOTAL encontrada na aba. Estoque lido: ${est}`);
-                    totalEstoqueOficial += est;
-                    continue; 
-                }
-
-                if (!obj['item']) continue;
-                
-                const itemObj = construirItem(obj, padrao);
-                if (itemObj) resultado.push(itemObj);
-            }
-            return resultado;
-        }
-
-        function parsearLinhasTSV(texto, padrao = {}) {
-            const linhas = texto.trim().split(/\r?\n/).filter(l => l.trim());
-            if (linhas.length < 2) throw new Error('Dados insuficientes.');
-            const cabecalhos = linhas[0].split('\t').map(normalizarCabecalho);
-            const resultado = [];
-            
-            for (let i = 1; i < linhas.length; i++) {
-                const valores = linhas[i].split('\t').map(v => v.trim());
-                const obj = {};
-                cabecalhos.forEach((c, idx) => obj[c] = valores[idx] || '');
-                
-                const itemUpper = String(obj['item'] || '').trim().toUpperCase();
-                
                 if (itemUpper === 'TOTAL' || itemUpper.startsWith('TOTAL')) {
                     const est = numInt(obj['pecas_nao_vendidas']);
                     totalEstoqueOficial += est;
@@ -341,19 +309,19 @@
         }
 
         // ============================================================
-        // BUSCA CSV ATRAVÉS DO SEU GAS PROXY (AQUI ESTÁ A CORREÇÃO DA URL)
+        // BUSCA CSV ATRAVÉS DO SEU GAS PROXY (AGORA BUSCANDO APENAS PELO GID)
         // ============================================================
         async function buscarCSV(gid) {
-            // Monta a URL EXATAMENTE como o Google exige: ?gid=...&single=true&output=csv
-            const targetUrl = `${SHEET_PUB_BASE}?gid=${gid}&single=true&output=csv&_=${Date.now()}`;
-            const proxyUrl = GAS_PROXY_URL + '?url=' + encodeURIComponent(targetUrl);
-
-            console.log('[Painel] Chamando GAS proxy: gid=' + gid);
+            const proxyUrl = GAS_PROXY_URL + '?gid=' + gid;
+            
+            console.log('[Painel] Buscando dados direto do Apps Script. GID: ' + gid);
             const resp = await fetch(proxyUrl, { redirect: 'follow' });
             if (!resp.ok) throw new Error('HTTP ' + resp.status);
 
             const texto = await resp.text();
             if (!texto.trim()) throw new Error('GAS retornou vazio.');
+            if (texto.trim().startsWith('<')) throw new Error('GAS retornou HTML em vez de CSV. Verifique a implantação.');
+
             return texto;
         }
 
@@ -393,7 +361,7 @@
                 }
 
                 dados = todosDados;
-                console.log(`[Painel] TOTAL OFICIAL LIDO DAS PLANILHAS: ${totalEstoqueOficial}`);
+                console.log(`[Painel] TOTAL OFICIAL LIDO: ${totalEstoqueOficial}`);
                 renderizarDashboard();
             } catch (erro) {
                 console.error('[Painel] Falha:', erro);
@@ -405,7 +373,34 @@
             }
         }
 
-        // ---------------- Fallback manual ----------------
+        // ---------------- Fallback manual (TSV) ----------------
+        function parsearLinhasTSV(texto, padrao = {}) {
+            const linhas = texto.trim().split(/\r?\n/).filter(l => l.trim());
+            if (linhas.length < 2) throw new Error('Dados insuficientes.');
+            const cabecalhos = linhas[0].split('\t').map(normalizarCabecalho);
+            const resultado = [];
+            
+            for (let i = 1; i < linhas.length; i++) {
+                const valores = linhas[i].split('\t').map(v => v.trim());
+                const obj = {};
+                cabecalhos.forEach((c, idx) => obj[c] = valores[idx] || '');
+                
+                const itemUpper = String(obj['item'] || '').trim().toUpperCase();
+                
+                if (itemUpper === 'TOTAL' || itemUpper.startsWith('TOTAL')) {
+                    const est = numInt(obj['pecas_nao_vendidas']);
+                    totalEstoqueOficial += est;
+                    continue; 
+                }
+
+                if (!obj['item']) continue;
+                
+                const itemObj = construirItem(obj, padrao);
+                if (itemObj) resultado.push(itemObj);
+            }
+            return resultado;
+        }
+
         function clicouBotao() {
             const texto = document.getElementById('caixa-dados').value;
             if (!texto.trim()) { alert('⚠️ Cole os dados primeiro!'); return; }
