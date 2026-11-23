@@ -102,14 +102,13 @@
     </div>
 
     <script>
-        const GAS_PROXY_URL = 'https://script.google.com/macros/s/AKfycbxay1JjpcmVdGQV0P6QHRiOKLA9V2pexleTwLWPxyDfQFwOlFWDw59aLpVg5grIFIaq/exec';
+        // ✅ URL ATUALIZADA COM O SEU NOVO LINK DE IMPLANTAÇÃO
+        const GAS_PROXY_URL = 'https://script.google.com/macros/s/AKfycbzNTjYhA5bTDWFhRoj4XxngkVrXHw9Lf-xVf8GBOijzjRrwlMHUjuQQQxMI6rUC2Mq4eg/exec';
 
-        // Se quiser incluir a aba LIVE depois, basta descomentar a linha abaixo:
         const CONFIG_ABAS = [
             { nome: 'fatelie', padrao: {} },
             { nome: 'TLF',     padrao: { fornecedor: 'TLF' } },
             { nome: 'fitness', padrao: { tipo: 'Fitness' } }
-            // { nome: 'LIVE', padrao: { fornecedor: 'LIVE' } }
         ];
 
         let dados = [];
@@ -253,16 +252,6 @@
                 let naoVendidas = stockIndex !== -1 ? numInt(valores[stockIndex]) : 0;
                 let lucro = lucroIndex !== -1 ? converterMoeda(valores[lucroIndex]) : converterMoeda(obj['lucro_das_vendas'] || obj['lucro']);
 
-                // Se a coluna # (junk column) existir e bagunçar os dados, ele ajusta
-                if (vendidasIndex > 0 && vendidas === 0 && lucro === 0 && naoVendidas > 0) {
-                    const hashIdx = vendidasIndex - 1;
-                    if (cabecalhos[hashIdx] === '#' || cabecalhos[hashIdx] === 'n_' || cabecalhos[hashIdx] === 'n') {
-                        vendidas = numInt(valores[hashIdx]);
-                        naoVendidas = numInt(valores[vendidasIndex]);
-                        lucro = converterMoeda(valores[stockIndex]); 
-                    }
-                }
-
                 let est = naoVendidas;
                 if (est === 0 && qtdComp > vendidas) {
                     est = qtdComp - vendidas;
@@ -389,15 +378,6 @@
                     let vendidas = vendidasIndex !== -1 ? numInt(valores[vendidasIndex]) : numInt(obj['pecas_vendidas']);
                     let naoVendidas = stockIndex !== -1 ? numInt(valores[stockIndex]) : 0;
                     let lucro = lucroIndex !== -1 ? converterMoeda(valores[lucroIndex]) : converterMoeda(obj['lucro_das_vendas'] || obj['lucro']);
-
-                    if (vendidasIndex > 0 && vendidas === 0 && lucro === 0 && naoVendidas > 0) {
-                        const hashIdx = vendidasIndex - 1;
-                        if (cabecalhos[hashIdx] === '#' || cabecalhos[hashIdx] === 'n_' || cabecalhos[hashIdx] === 'n') {
-                            vendidas = numInt(valores[hashIdx]);
-                            naoVendidas = numInt(valores[vendidasIndex]);
-                            lucro = converterMoeda(valores[stockIndex]); 
-                        }
-                    }
 
                     let est = naoVendidas;
                     if (est === 0 && qtdComp > vendidas) {
