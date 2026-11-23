@@ -45,7 +45,6 @@
         .loading { text-align: center; padding: 60px 20px; }
         .spinner { display: inline-block; width: 40px; height: 40px; border: 3px solid #e2e8f0; border-top-color: #3b82f6; border-radius: 50%; animation: spin 0.8s linear infinite; margin-bottom: 16px; }
         @keyframes spin { to { transform: rotate(360deg); } }
-        .diagnostico { background: #f0fdf4; border-left: 3px solid #16a34a; padding: 10px; margin: 10px 0; border-radius: 4px; font-size: 12px; color: #166534; }
         @media (max-width: 1024px) {
             .kpis { grid-template-columns: repeat(3, 1fr); }
             .grade-graficos { grid-template-columns: 1fr; }
@@ -60,27 +59,26 @@
     <div id="tela-loading" class="card loading">
         <div class="spinner"></div>
         <h2>Carregando dados da planilha...</h2>
-        <p style="color:#64748b;font-size:13px;margin-top:8px;" id="loading-msg">Iniciando...</p>
+        <p style="color:#64748b;font-size:13px;margin-top:8px;" id="loading-msg">Isso pode levar alguns segundos.</p>
     </div>
 
     <div id="tela-inicial" class="card oculto">
         <h2>📊 Painel de Estoque e Vendas</h2>
-        <div class="instrucoes erro" id="mensagem-erro" style="display:none;">
-            <strong>Não foi possível carregar automaticamente:</strong><br>
-            <span id="texto-erro"></span>
+        <div class="instrucoes erro" id="mensagem-erro">
+            Não foi possível carregar a planilha automaticamente.
         </div>
         <div class="instrucoes">
-            <strong>📋 Plano B — Colar manualmente:</strong><br>
-            1. Na planilha Google, selecione tudo (cabeçalhos + dados)<br>
-            2. Ctrl+C → copiar<br>
-            3. Clique na caixa abaixo → Ctrl+V → colar<br>
+            <strong>Você pode colar os dados manualmente:</strong><br>
+            1. Na sua planilha, selecione tudo (cabeçalhos + dados)<br>
+            2. Pressione Ctrl+C para copiar<br>
+            3. Clique na caixa abaixo e pressione Ctrl+V<br>
             4. Clique em <strong>✅ Gerar Painel</strong>
         </div>
         <textarea id="caixa-dados" placeholder="Cole seus dados aqui..."></textarea>
         <br>
         <button class="btn-principal" onclick="clicouBotao()">✅ Gerar Painel</button>
         <button class="btn-secundario" onclick="document.getElementById('caixa-dados').value=''">🗑️ Limpar</button>
-        <button class="btn-secundario" onclick="tentarCarregarPlanilha()">🔄 Tentar carregamento automático</button>
+        <button class="btn-secundario" onclick="tentarCarregarPlanilha()">🔄 Tentar novamente</button>
     </div>
 
     <div id="tela-dashboard" class="oculto">
@@ -91,6 +89,7 @@
                     <div class="kpi-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
                 </div>
                 <div class="kpi-valor" id="k1">R$ 0</div>
+                <div><span class="kpi-variacao neutro" id="k1-var">—</span><span class="vs-texto">vs. mês anterior</span></div>
             </div>
             <div class="kpi-card">
                 <div class="kpi-header">
@@ -98,6 +97,7 @@
                     <div class="kpi-icon" style="background:#f0fdf4;"><svg viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg></div>
                 </div>
                 <div class="kpi-valor" id="k2">R$ 0</div>
+                <div><span class="kpi-variacao neutro" id="k2-var">—</span><span class="vs-texto">vs. mês anterior</span></div>
             </div>
             <div class="kpi-card">
                 <div class="kpi-header">
@@ -105,6 +105,7 @@
                     <div class="kpi-icon" style="background:#fffbeb;"><svg viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg></div>
                 </div>
                 <div class="kpi-valor" id="k3">0</div>
+                <div><span class="kpi-variacao neutro" id="k3-var">—</span><span class="vs-texto">vs. mês anterior</span></div>
             </div>
             <div class="kpi-card">
                 <div class="kpi-header">
@@ -112,6 +113,7 @@
                     <div class="kpi-icon" style="background:#fdf4ff;"><svg viewBox="0 0 24 24" fill="none" stroke="#c026d3" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg></div>
                 </div>
                 <div class="kpi-valor" id="k4">0</div>
+                <div><span class="kpi-variacao neutro" id="k4-var">—</span><span class="vs-texto">vs. mês anterior</span></div>
             </div>
             <div class="kpi-card">
                 <div class="kpi-header">
@@ -119,10 +121,9 @@
                     <div class="kpi-icon" style="background:#f0fdfa;"><svg viewBox="0 0 24 24" fill="none" stroke="#0d9488" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg></div>
                 </div>
                 <div class="kpi-valor" id="k5">R$ 0</div>
+                <div><span class="kpi-variacao neutro" id="k5-var">—</span><span class="vs-texto">vs. mês anterior</span></div>
             </div>
         </div>
-
-        <div id="diagnostico-box" class="diagnostico" style="display:none;"></div>
 
         <div class="grade-graficos">
             <div class="card">
@@ -141,59 +142,88 @@
             </div>
             <div class="card">
                 <h2>Composição de Receita</h2>
-                <div class="subtitulo">Custo, Lucro, vendas e estoque por mês</div>
+                <div class="subtitulo">Custo, Lucro, volume de vendas e estoque por mês</div>
                 <div class="grafico" style="margin-top: 46px;"><canvas id="grafico-barras"></canvas></div>
             </div>
         </div>
 
         <div class="card" style="text-align: center; margin-top: 24px;">
+            <div id="debug-info" style="color: #dc2626; font-weight: bold; font-size: 14px; margin-bottom: 15px;"></div>
             <button class="btn-secundario" onclick="voltar()">🔄 Carregar novos dados</button>
             <button class="btn-secundario" onclick="tentarCarregarPlanilha()">📥 Recarregar da planilha</button>
         </div>
     </div>
 
     <script>
-        // ============================================================
-        // CONFIGURAÇÃO
-        // ============================================================
-        // ⚠️ COLE A NOVA URL DO SEU APlicativo da Web AQUI ABAIXO!
+        // ✅ URL CORRIGIDA DO APPS SCRIPT
         const GAS_PROXY_URL = 'https://script.google.com/macros/s/AKfycbxay1JjpcmVdGQV0P6QHRiOKLA9V2pexleTwLWPxyDfQFwOlFWDw59aLpVg5grIFIaq/exec';
 
+        // ✅ Configuração das abas — confira os nomes exatos da planilha!
         const CONFIG_ABAS = [
             { nome: 'fatelie', padrao: {} },
             { nome: 'TLF',     padrao: { fornecedor: 'TLF' } },
-            { nome: 'LIVE',    padrao: { fornecedor: 'LIVE' } },
             { nome: 'fitness', padrao: { tipo: 'Fitness' } }
         ];
-
-        // COLUNAS — POSIÇÃO FIXA PARA TODAS AS ABAS
-        const COL = {
-            ITEM: 0,
-            VENDEDORA: 1,
-            TIPO: 2,
-            FORNECEDOR: 3,
-            TAMANHO: 4,
-            COR: 5,
-            CLIENTE: 6,
-            DATA: 7,
-            QTD_COMPRADA: 8,
-            VALOR_COMPRA: 9,
-            VALOR_VENDA: 10,
-            VENDIDAS: 11,
-            NAO_VENDIDAS: 12,
-            LUCRO: 13
-        };
 
         let dados = [];
         let graficos = {};
         let abaAtual = 'total';
-        let totalEstoqueOficial = 0;
-        let diagnosticoInfo = [];
+        let totalEstoqueOficial = 0; 
 
-        // ============================================================
-        // FUNÇÕES UTILITÁRIAS
-        // ============================================================
         function converterMoeda(v) {
             if (v === null || v === undefined || v === '') return 0;
             const s = String(v).replace(/R\$\s?/g, '').trim();
-            if (s.includes(',')) return parseFloat(s.replace(/
+            if (s.includes(',')) return parseFloat(s.replace(/\./g, '').replace(',', '.')) || 0;
+            return parseFloat(s) || 0;
+        }
+        function formatarMoeda(v) {
+            const inteiro = Math.round(v);
+            const s = Math.abs(inteiro).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+            return (inteiro < 0 ? '-R$ ' : 'R$ ') + s;
+        }
+        function normalizarCabecalho(s) {
+            return String(s || '').replace(/\uFEFF/g, '').trim().toLowerCase()
+                .replace(/[\u00A0\u2007\u202F]/g, ' ').replace(/\s+/g, '_')
+                .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        }
+        function normalizarTextoAgrupamento(txt) {
+            if (!txt) return 'Não Informado';
+            let t = String(txt).trim();
+            const lower = t.toLowerCase();
+            if (lower === '' || lower === 'não informado' || lower === 'nao informado' || lower === 'não identificado' || lower === 'nao identificado' || lower === '—' || lower === '-') {
+                return 'Não Informado';
+            }
+            return t.toLowerCase().replace(/(?:^|\s)\S/g, function(a) { return a.toUpperCase(); });
+        }
+        function extrairMes(dataStr) {
+            if (!dataStr) return 'Sem data';
+            const p = String(dataStr).trim().split(/[-\/\.]/);
+            if (p.length >= 3) {
+                const meses = ['', 'Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+                let ano, mes;
+                if (p[0].length === 4) { ano = p[0]; mes = parseInt(p[1]); }
+                else if (p[2].length === 4) { mes = parseInt(p[1]); ano = p[2]; }
+                else if (p[2].length === 2) { mes = parseInt(p[1]); ano = '20' + p[2]; }
+                else return dataStr;
+                return (mes >= 1 && mes <= 12 ? meses[mes] : String(mes)) + '/' + ano;
+            }
+            return dataStr;
+        }
+        function extrairTipo(nome) {
+            if (!nome) return 'Outros';
+            const t = String(nome).toLowerCase();
+            if (t.includes('calça') || t.includes('calca')) return 'Calça';
+            if (t.includes('saia')) return 'Saia';
+            if (t.includes('short') || t.includes('bermuda')) return 'Short/Bermuda';
+            if (t.includes('camisa') || t.includes('blusa') || t.includes('camiseta') || t.includes('t-shirt') || t.includes('body') || t.includes('top') || t.includes('camisão')) return 'Camisa/Blusa';
+            if (t.includes('vestido')) return 'Vestido';
+            if (t.includes('conjunto')) return 'Conjunto';
+            if (t.includes('cinto')) return 'Cinto';
+            if (t.includes('lenço') || t.includes('lenco')) return 'Lenço';
+            return 'Outros';
+        }
+        function numInt(v) { return parseInt(String(v || '').replace(/[^0-9-]/g, '')) || 0; }
+        function ordenarMeses(meses) {
+            const ordem = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+            return meses.sort((a, b) => {
+                const [ma, ya] = a.split('/'); const [mb, yb] = b.split('/');
