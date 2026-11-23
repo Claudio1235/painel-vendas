@@ -260,6 +260,14 @@
             const cabecalhos = linhas[0].map(normalizarCabecalho);
             const resultado = [];
             
+            // Encontra o índice da coluna de estoque de forma inteligente
+            let stockIndex = cabecalhos.findIndex(h => h.includes('nao') && h.includes('vendida'));
+            if (stockIndex === -1) stockIndex = cabecalhos.findIndex(h => h.includes('pecas') && h.includes('nao'));
+            
+            // Encontra o índice da quantidade comprada
+            let compradoIndex = cabecalhos.findIndex(h => h.includes('quantidade') && h.includes('comprada'));
+            if (compradoIndex === -1) compradoIndex = cabecalhos.findIndex(h => h.includes('qtd') && h.includes('comprada'));
+
             for (let i = 1; i < linhas.length; i++) {
                 const valores = linhas[i];
                 if (!valores || valores.every(v => !v || !v.trim())) continue;
@@ -268,13 +276,17 @@
                 cabecalhos.forEach((c, idx) => obj[c] = (valores[idx] || '').trim());
                 
                 const itemNome = String(obj['item'] || '').trim().toUpperCase();
-                const qtdComprada = numInt(obj['quantidade_comprada']);
-                const pecasNaoVendidas = numInt(obj['pecas_nao_vendidas']);
+                const rowString = valores.join(' ').toUpperCase();
                 
-                // NOVA LÓGICA: Encontra o TOTAL se tiver a palavra, OU se for a linha de fechamento (vazia, mas com dados)
-                if (itemNome.includes('TOTAL') || (itemNome === '' && qtdComprada > 0)) {
-                    console.log(`[Painel] Linha TOTAL encontrada na aba. Estoque lido: ${pecasNaoVendidas}`);
-                    totalEstoqueOficial += pecasNaoVendidas;
+                // NOVA DETECÇÃO DO TOTAL: Pega se tiver a palavra na linha toda, ou se for a última linha com dados
+                const isTotalRow = itemNome.includes('TOTAL') || 
+                                   rowString.includes('TOTAL') || 
+                                   (itemNome === '' && valores.length > 5 && i > linhas.length - 4);
+
+                if (isTotalRow) {
+                    const est = stockIndex !== -1 ? numInt(valores[stockIndex]) : 0;
+                    console.log(`[Painel] Linha TOTAL na aba ${padrao.fornecedor || padrao.tipo || 'padrao'}. Estoque lido: ${est}`);
+                    totalEstoqueOficial += est;
                     continue; 
                 }
 
@@ -285,6 +297,10 @@
                 const tipoFinal = padrao.tipo || tipoDoCampo || extrairTipo(itemNome);
                 const dataStr = obj['data_da_venda'] || obj['data'] || '';
                 
+                const qtdComp = compradoIndex !== -1 ? numInt(valores[compradoIndex]) : numInt(obj['quantidade_comprada']);
+                const vendidas = numInt(obj['pecas_vendidas']);
+                const est = stockIndex !== -1 ? numInt(valores[stockIndex]) : (qtdComp - vendidas);
+
                 resultado.push({
                     item: itemNome,
                     tipo: tipoFinal,
@@ -293,11 +309,11 @@
                     fornecedor: padrao.fornecedor || obj['fornecedor'] || 'Não informado',
                     vendedora: obj['vendedora'] || 'Não informada',
                     mes: extrairMes(dataStr),
-                    receita: converterMoeda(obj['valor_vendido_por_item']) * numInt(obj['pecas_vendidas']),
-                    custo_total: converterMoeda(obj['valor_comprado_por_item']) * qtdComprada,
+                    receita: converterMoeda(obj['valor_vendido_por_item']) * vendidas,
+                    custo_total: converterMoeda(obj['valor_comprado_por_item']) * qtdComp,
                     lucro: converterMoeda(obj['lucro_das_vendas'] || obj['lucro']),
-                    qtd_vendida: numInt(obj['pecas_vendidas']),
-                    estoque: pecasNaoVendidas
+                    qtd_vendida: vendidas,
+                    estoque: est
                 });
             }
             return resultado;
@@ -375,22 +391,34 @@
                 const linhas = texto.trim().split(/\r?\n/).map(l => l.split('\t'));
                 const cabecalhos = linhas[0].map(normalizarCabecalho);
                 const resultado = [];
+                
+                let stockIndex = cabecalhos.findIndex(h => h.includes('nao') && h.includes('vendida'));
+                if (stockIndex === -1) stockIndex = cabecalhos.findIndex(h => h.includes('pecas') && h.includes('nao'));
+                
+                let compradoIndex = cabecalhos.findIndex(h => h.includes('quantidade') && h.includes('comprada'));
+                if (compradoIndex === -1) compradoIndex = cabecalhos.findIndex(h => h.includes('qtd') && h.includes('comprada'));
+
                 for(let i=1; i<linhas.length; i++) {
                     const valores = linhas[i];
                     const obj = {};
                     cabecalhos.forEach((c, idx) => obj[c] = (valores[idx] || '').trim());
                     
                     const itemNome = String(obj['item'] || '').trim().toUpperCase();
-                    const qtdComprada = numInt(obj['quantidade_comprada']);
-                    const pecasNaoVendidas = numInt(obj['pecas_nao_vendidas']);
+                    const rowString = valores.join(' ').toUpperCase();
+                    const isTotalRow = itemNome.includes('TOTAL') || rowString.includes('TOTAL') || (itemNome === '' && valores.length > 5 && i > linhas.length - 4);
 
-                    if(itemNome.includes('TOTAL') || (itemNome === '' && qtdComprada > 0)) {
-                        totalEstoqueOficial += pecasNaoVendidas;
+                    if(isTotalRow) {
+                        const est = stockIndex !== -1 ? numInt(valores[stockIndex]) : 0;
+                        totalEstoqueOficial += est;
                         continue;
                     }
                     if(!itemNome) continue;
                     
                     const dataStr = obj['data_da_venda'] || obj['data'] || '';
+                    const qtdComp = compradoIndex !== -1 ? numInt(valores[compradoIndex]) : numInt(obj['quantidade_comprada']);
+                    const vendidas = numInt(obj['pecas_vendidas']);
+                    const est = stockIndex !== -1 ? numInt(valores[stockIndex]) : (qtdComp - vendidas);
+
                     resultado.push({
                         item: itemNome,
                         tipo: obj['tipo'] || extrairTipo(itemNome),
@@ -399,11 +427,11 @@
                         fornecedor: obj['fornecedor'] || 'Não informado',
                         vendedora: obj['vendedora'] || 'Não informada',
                         mes: extrairMes(dataStr),
-                        receita: converterMoeda(obj['valor_vendido_por_item']) * numInt(obj['pecas_vendidas']),
-                        custo_total: converterMoeda(obj['valor_comprado_por_item']) * qtdComprada,
+                        receita: converterMoeda(obj['valor_vendido_por_item']) * vendidas,
+                        custo_total: converterMoeda(obj['valor_comprado_por_item']) * qtdComp,
                         lucro: converterMoeda(obj['lucro_das_vendas'] || obj['lucro']),
-                        qtd_vendida: numInt(obj['pecas_vendidas']),
-                        estoque: pecasNaoVendidas
+                        qtd_vendida: vendidas,
+                        estoque: est
                     });
                 }
                 if (resultado.length === 0) throw new Error('Nenhuma linha válida.');
