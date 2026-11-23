@@ -267,25 +267,26 @@
                 const obj = {};
                 cabecalhos.forEach((c, idx) => obj[c] = (valores[idx] || '').trim());
                 
-                const itemUpper = String(obj['item'] || '').trim().toUpperCase();
+                const itemNome = String(obj['item'] || '').trim().toUpperCase();
+                const qtdComprada = numInt(obj['quantidade_comprada']);
+                const pecasNaoVendidas = numInt(obj['pecas_nao_vendidas']);
                 
-                // Captura o estoque exato da linha TOTAL da aba
-                if (itemUpper === 'TOTAL' || itemUpper.startsWith('TOTAL')) {
-                    const est = numInt(obj['pecas_nao_vendidas']);
-                    console.log(`[Painel] Linha TOTAL encontrada na aba. Estoque lido: ${est}`);
-                    totalEstoqueOficial += est;
+                // NOVA LÓGICA: Encontra o TOTAL se tiver a palavra, OU se for a linha de fechamento (vazia, mas com dados)
+                if (itemNome.includes('TOTAL') || (itemNome === '' && qtdComprada > 0)) {
+                    console.log(`[Painel] Linha TOTAL encontrada na aba. Estoque lido: ${pecasNaoVendidas}`);
+                    totalEstoqueOficial += pecasNaoVendidas;
                     continue; 
                 }
 
-                if (!obj['item']) continue;
+                if (!itemNome) continue;
                 
                 const tipoCol = obj['tipo'];
                 const tipoDoCampo = (tipoCol && !/n[ãa]o\s*identificad/i.test(tipoCol) && tipoCol !== '—') ? tipoCol : null;
-                const tipoFinal = padrao.tipo || tipoDoCampo || extrairTipo(obj['item']);
+                const tipoFinal = padrao.tipo || tipoDoCampo || extrairTipo(itemNome);
                 const dataStr = obj['data_da_venda'] || obj['data'] || '';
                 
                 resultado.push({
-                    item: obj['item'],
+                    item: itemNome,
                     tipo: tipoFinal,
                     cor: obj['cor'] || 'Não informado',
                     tamanho: obj['tamanho'] || 'Não informado',
@@ -293,10 +294,10 @@
                     vendedora: obj['vendedora'] || 'Não informada',
                     mes: extrairMes(dataStr),
                     receita: converterMoeda(obj['valor_vendido_por_item']) * numInt(obj['pecas_vendidas']),
-                    custo_total: converterMoeda(obj['valor_comprado_por_item']) * numInt(obj['quantidade_comprada']),
+                    custo_total: converterMoeda(obj['valor_comprado_por_item']) * qtdComprada,
                     lucro: converterMoeda(obj['lucro_das_vendas'] || obj['lucro']),
                     qtd_vendida: numInt(obj['pecas_vendidas']),
-                    estoque: numInt(obj['pecas_nao_vendidas'])
+                    estoque: pecasNaoVendidas
                 });
             }
             return resultado;
@@ -306,7 +307,6 @@
         // BUSCA CSV ATRAVÉS DO SEU GAS PROXY
         // ============================================================
         async function buscarCSV(nomeAba) {
-            // Agora envia o NOME da aba para o GAS, não mais o GID
             const proxyUrl = GAS_PROXY_URL + '?sheet=' + encodeURIComponent(nomeAba);
 
             console.log('[Painel] Chamando GAS proxy para a aba: ' + nomeAba);
@@ -379,25 +379,31 @@
                     const valores = linhas[i];
                     const obj = {};
                     cabecalhos.forEach((c, idx) => obj[c] = (valores[idx] || '').trim());
-                    if(String(obj['item'] || '').toUpperCase().includes('TOTAL')) {
-                        totalEstoqueOficial += numInt(obj['pecas_nao_vendidas']);
+                    
+                    const itemNome = String(obj['item'] || '').trim().toUpperCase();
+                    const qtdComprada = numInt(obj['quantidade_comprada']);
+                    const pecasNaoVendidas = numInt(obj['pecas_nao_vendidas']);
+
+                    if(itemNome.includes('TOTAL') || (itemNome === '' && qtdComprada > 0)) {
+                        totalEstoqueOficial += pecasNaoVendidas;
                         continue;
                     }
-                    if(!obj['item']) continue;
+                    if(!itemNome) continue;
+                    
                     const dataStr = obj['data_da_venda'] || obj['data'] || '';
                     resultado.push({
-                        item: obj['item'],
-                        tipo: obj['tipo'] || extrairTipo(obj['item']),
+                        item: itemNome,
+                        tipo: obj['tipo'] || extrairTipo(itemNome),
                         cor: obj['cor'] || 'Não informado',
                         tamanho: obj['tamanho'] || 'Não informado',
                         fornecedor: obj['fornecedor'] || 'Não informado',
                         vendedora: obj['vendedora'] || 'Não informada',
                         mes: extrairMes(dataStr),
                         receita: converterMoeda(obj['valor_vendido_por_item']) * numInt(obj['pecas_vendidas']),
-                        custo_total: converterMoeda(obj['valor_comprado_por_item']) * numInt(obj['quantidade_comprada']),
+                        custo_total: converterMoeda(obj['valor_comprado_por_item']) * qtdComprada,
                         lucro: converterMoeda(obj['lucro_das_vendas'] || obj['lucro']),
                         qtd_vendida: numInt(obj['pecas_vendidas']),
-                        estoque: numInt(obj['pecas_nao_vendidas'])
+                        estoque: pecasNaoVendidas
                     });
                 }
                 if (resultado.length === 0) throw new Error('Nenhuma linha válida.');
