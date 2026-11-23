@@ -158,13 +158,12 @@
         // ============================================================
         // CONFIGURAÇÃO DAS ABAS
         // ============================================================
-        const SPREADSHEET_ID = '1y9zx6olaOdrQA2TSgebdtvS22VGXZlkSElcI4yMIwXw';
         const GAS_PROXY_URL = 'https://script.google.com/macros/s/AKfycbxay1JjpcmVdGQV0P6QHRiOKLA9V2pexleTwLWPxyDfQFwOlFWDw59aLpVg5grIFIaq/exec';
 
         const CONFIG_ABAS = [
-            { nome: 'fatelie', gid: '0',          padrao: {} },
-            { nome: 'TLF',     gid: '1069955875', padrao: { fornecedor: 'TLF' } },
-            { nome: 'fitness', gid: '1425439600', padrao: { tipo: 'Fitness' } }
+            { nome: 'fatelie', padrao: {} },
+            { nome: 'TLF',     padrao: { fornecedor: 'TLF' } },
+            { nome: 'fitness', padrao: { tipo: 'Fitness' } }
         ];
 
         let dados = [];
@@ -270,6 +269,7 @@
                 
                 const itemUpper = String(obj['item'] || '').trim().toUpperCase();
                 
+                // Captura o estoque exato da linha TOTAL da aba
                 if (itemUpper === 'TOTAL' || itemUpper.startsWith('TOTAL')) {
                     const est = numInt(obj['pecas_nao_vendidas']);
                     console.log(`[Painel] Linha TOTAL encontrada na aba. Estoque lido: ${est}`);
@@ -305,19 +305,18 @@
         // ============================================================
         // BUSCA CSV ATRAVÉS DO SEU GAS PROXY
         // ============================================================
-        async function buscarCSV(gid) {
-            // URL de exportação oficial que NÃO ignora o GID
-            const exportUrl = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/export?format=csv&gid=${gid}&_=${Date.now()}`;
-            const proxyUrl = GAS_PROXY_URL + '?url=' + encodeURIComponent(exportUrl);
+        async function buscarCSV(nomeAba) {
+            // Agora envia o NOME da aba para o GAS, não mais o GID
+            const proxyUrl = GAS_PROXY_URL + '?sheet=' + encodeURIComponent(nomeAba);
 
-            console.log('[Painel] Chamando GAS proxy para o GID: ' + gid);
+            console.log('[Painel] Chamando GAS proxy para a aba: ' + nomeAba);
             const resp = await fetch(proxyUrl);
             if (!resp.ok) throw new Error('HTTP ' + resp.status);
 
             const texto = await resp.text();
             if (!texto.trim()) throw new Error('GAS retornou vazio.');
-            if (texto.trim().startsWith('<') || texto.includes('ERRO:')) {
-                throw new Error('O Apps Script retornou um erro ou HTML. Verifique a implantação.');
+            if (texto.trim().startsWith('<') || texto.includes('ERRO:') || texto.includes('Aba não encontrada')) {
+                throw new Error('O Apps Script retornou um erro. Verifique o nome da aba.');
             }
 
             return texto;
@@ -342,7 +341,7 @@
                     const aba = CONFIG_ABAS[i];
                     loadingMsg.textContent = `Baixando aba "${aba.nome}" (${i + 1}/${CONFIG_ABAS.length})...`;
                     try {
-                        const texto = await buscarCSV(aba.gid);
+                        const texto = await buscarCSV(aba.nome);
                         const dadosAba = parsearLinhasCSV(texto, aba.padrao);
                         todosDados.push(...dadosAba);
                     } catch (e) {
