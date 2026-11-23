@@ -84,6 +84,8 @@
                 <div class="abas">
                     <div class="aba ativa" onclick="trocarAba('total')" id="aba-total">Total</div>
                     <div class="aba" onclick="trocarAba('tipo')" id="aba-tipo">Por Tipo</div>
+                    <div class="aba" onclick="trocarAba('tamanho')" id="aba-tamanho">Por Tamanho</div>
+                    <div class="aba" onclick="trocarAba('cor')" id="aba-cor">Por Cor</div>
                     <div class="aba" onclick="trocarAba('fornecedor')" id="aba-fornecedor">Por Fornecedor</div>
                 </div>
                 <div class="grafico"><canvas id="grafico-linha"></canvas></div>
@@ -102,7 +104,6 @@
     </div>
 
     <script>
-        // ✅ URL ATUALIZADA COM O SEU NOVO LINK DE IMPLANTAÇÃO
         const GAS_PROXY_URL = 'https://script.google.com/macros/s/AKfycbzNTjYhA5bTDWFhRoj4XxngkVrXHw9Lf-xVf8GBOijzjRrwlMHUjuQQQxMI6rUC2Mq4eg/exec';
 
         const CONFIG_ABAS = [
